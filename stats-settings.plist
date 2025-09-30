@@ -38,8 +38,14 @@
 	<integer>2</integer>
 	<key>Battery_mini_position</key>
 	<integer>3</integer>
+	<key>Battery_notifications_high</key>
+	<string></string>
+	<key>Battery_notifications_low</key>
+	<string>low</string>
 	<key>Battery_position</key>
 	<integer>2</integer>
+	<key>Battery_processes</key>
+	<integer>5</integer>
 	<key>Battery_state</key>
 	<true/>
 	<key>Battery_widget</key>
@@ -77,7 +83,7 @@
 	<key>CPU_position</key>
 	<integer>8</integer>
 	<key>CPU_processes</key>
-	<integer>8</integer>
+	<integer>5</integer>
 	<key>CPU_splitValue</key>
 	<false/>
 	<key>CPU_state</key>
@@ -111,7 +117,7 @@
 	<key>CombinedModules_separator</key>
 	<false/>
 	<key>CombinedModules_spacing</key>
-	<string>2</string>
+	<string>none</string>
 	<key>Disk_377D5674-AC54-411E-8B8F-978BBA6DEB7E_popup</key>
 	<true/>
 	<key>Disk_barChart_position</key>
@@ -176,14 +182,14 @@
 	<data>
 	Ym9va+wCAAAAAAQQMAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAxAEA
 	AAQAAAADAwAAAAQAAAUAAAABAQAAVXNlcnMAAAAFAAAAAQEAAG1hcmNvAAAACQAAAAEB
-	AABEb2N1bWVudHMAAAAMAAAAAQYAABAAAAAgAAAAMAAAAAgAAAAEAwAAHUIAAAAAAAAI
-	AAAABAMAAIwTBAAAAAAACAAAAAQDAACQTwQAAAAAAAwAAAABBgAAWAAAAGgAAAB4AAAA
-	CAAAAAAEAABBxXEyngAAABgAAAABAgAAAgAAAAAAAAAfAgAAAAAAAB8CAAAAAAAAAAAA
+	AABEb3dubG9hZHMAAAAMAAAAAQYAABAAAAAgAAAAMAAAAAgAAAAEAwAAHUIAAAAAAAAI
+	AAAABAMAAIwTBAAAAAAACAAAAAQDAAAdUAQAAAAAAAwAAAABBgAAWAAAAGgAAAB4AAAA
+	CAAAAAAEAABBxi/IBoAAABgAAAABAgAAAgAAAAAAAAAfAgAAAAAAAB8CAAAAAAAAAAAA
 	AAEFAAAIAAAABAMAAAEAAAAAAAAABAAAAAMDAAD1AQAACAAAAAEJAABmaWxlOi8vLwwA
-	AAABAQAATWFjaW50b3NoIEhECAAAAAQDAAAAUKEbcwAAAAgAAAAABAAAQcZhJICAAAAk
+	AAABAQAATWFjaW50b3NoIEhECAAAAAQDAAAAUKEbcwAAAAgAAAAABAAAQcc4BdKAAAAk
 	AAAAAQEAADcwOUU0RUNFLTI2QjQtNEEzMS05N0YxLURFMUVFMzI2MkQyQRgAAAABAgAA
 	gQAAAAEAAADvEwAAAQAAAO8TAAABAAAAAQAAAAEBAAAvAAAAMAAAAAECAABkbmliAAAA
-	AAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABzY29kAgAAAAAAAADwAAAA/v///wEA
+	AAEAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAABmbndkAgAAAAAAAADwAAAA/v///wEA
 	AAAAAAAAEwAAAAQQAABEAAAAAAAAAAUQAACIAAAAAAAAABAQAACsAAAAAAAAAEAQAACc
 	AAAAAAAAAAIgAACAAQAAAAAAAAUgAADwAAAAAAAAABAgAAAAAQAAAAAAABEgAAA0AQAA
 	AAAAABIgAAAUAQAAAAAAABMgAAAkAQAAAAAAACAgAABgAQAAAAAAADAgAADMAAAAAAAA
@@ -204,19 +210,23 @@
 		<integer>1</integer>
 	</dict>
 	<key>NSWindow Frame NSNavPanelAutosaveName</key>
-	<string>571 599 370 167 0 0 1512 948 </string>
+	<string>571 597 370 167 0 0 1512 948 </string>
 	<key>Network_base</key>
 	<string>bit</string>
 	<key>Network_chartHistory</key>
 	<integer>300</integer>
 	<key>Network_position</key>
 	<integer>3</integer>
+	<key>Network_processes</key>
+	<integer>5</integer>
 	<key>Network_publicIPRefreshInterval</key>
 	<string>24</string>
 	<key>Network_state</key>
 	<true/>
+	<key>Network_updateICMPInterval</key>
+	<integer>10</integer>
 	<key>Network_usageReset</key>
-	<string>At start</string>
+	<string>Once per day</string>
 	<key>Network_widgetActivationThresholdSize</key>
 	<string>KB</string>
 	<key>Network_widgetActivationThresholdState</key>
@@ -247,6 +257,8 @@
 	<integer>4</integer>
 	<key>RAM_position</key>
 	<integer>6</integer>
+	<key>RAM_processes</key>
+	<integer>5</integer>
 	<key>RAM_splitValue</key>
 	<true/>
 	<key>RAM_state</key>
@@ -356,7 +368,7 @@
 	<key>stack_F1Ac_index</key>
 	<integer>1</integer>
 	<key>support_ts</key>
-	<integer>1756132542</integer>
+	<integer>1758979734</integer>
 	<key>telemetry</key>
 	<true/>
 	<key>temperature_units</key>
@@ -364,8 +376,8 @@
 	<key>update-interval</key>
 	<string>Silent</string>
 	<key>updater_check_ts</key>
-	<integer>1757975717</integer>
+	<integer>1759221224</integer>
 	<key>version</key>
-	<string>2.11.52</string>
+	<string>2.11.54</string>
 </dict>
 </plist>
