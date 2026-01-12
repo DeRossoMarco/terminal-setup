@@ -38,14 +38,14 @@ One-command installation and configuration for a modern, beautiful terminal setu
 ### One-Line Install (when hosted on GitHub)
 
 ```bash
-curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/terminal-setup/main/install.sh | bash
+curl -fsSL https://raw.githubusercontent.com/DeRossoMarco/terminal-setup/main/install.sh | bash
 ```
 
 ### Manual Install
 
 ```bash
 # Clone the repository
-git clone https://github.com/YOUR_USERNAME/terminal-setup.git
+git clone https://github.com/DeRossoMarco/terminal-setup.git
 cd terminal-setup
 
 # Make executable and run
