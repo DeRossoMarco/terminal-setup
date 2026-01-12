@@ -213,25 +213,6 @@ echo 'eval "$(starship init bash)"' >> ~/.bashrc  # Linux
 exec $SHELL
 ```
 
-## 🚀 Hosting on GitHub
-
-To make this script available via curl:
-
-1. Create a new GitHub repository named `terminal-setup`
-2. Push this code to the repository
-3. Update the curl command in README with your username
-4. Share the one-liner with others!
-
-```bash
-# Create new repo
-git init
-git add .
-git commit -m "Initial commit: Terminal setup script"
-git branch -M main
-git remote add origin https://github.com/YOUR_USERNAME/terminal-setup.git
-git push -u origin main
-```
-
 ## 📄 License
 
 MIT License - Feel free to use and modify!
