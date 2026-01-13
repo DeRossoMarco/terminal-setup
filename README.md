@@ -213,10 +213,6 @@ echo 'eval "$(starship init bash)"' >> ~/.bashrc  # Linux
 exec $SHELL
 ```
 
-## 📄 License
-
-MIT License - Feel free to use and modify!
-
 ## 🤝 Contributing
 
 Contributions welcome! Feel free to:
@@ -237,5 +233,3 @@ This setup script configures amazing open-source tools. Give them a star!
 - And many more...
 
 ---
-
-**Happy Terminal Hacking! 🎉**
