@@ -14,7 +14,7 @@ One-command installation and configuration for a modern, beautiful terminal setu
 - **[ripgrep](https://github.com/BurntSushi/ripgrep)** - Fast grep alternative
 - **[bat](https://github.com/sharkdp/bat)** - Better cat with syntax highlighting
 - **[eza](https://github.com/eza-community/eza)** - Modern ls replacement
-- **[zoxide](https://github.com/ajstarks/zoxide)** - Smarter cd command
+- **[zoxide](https://github.com/ajmeek/zoxide)** - Smarter cd command
 - **[Neovim](https://neovim.io/)** - Hyperextensible text editor
 
 ### Shell Configuration
@@ -61,7 +61,7 @@ The script creates/updates:
 
 - `~/.zshrc` (macOS) or `~/.bashrc` (Linux)
 - `~/.config/starship.toml`
-- `~/.tmux.conf`
+- `~/.config/tmux/` (Oh My Tmux! installation)
 - `~/.config/btop/btop.conf`
 
 **Note**: Existing configuration files are automatically backed up with a timestamp.
@@ -119,14 +119,29 @@ See [Starship documentation](https://starship.rs/config/) for all options.
 
 ### Tmux
 
-Edit `~/.tmux.conf` for tmux customizations.
+The script installs **[Oh My Tmux!](https://github.com/gpakosz/.tmux)** - a beautiful, feature-rich tmux configuration.
 
-Key bindings:
+**Installation structure:**
+- Main config: `~/.local/share/tmux/oh-my-tmux/.tmux.conf` (managed by Oh My Tmux)
+- Symlink: `~/.config/tmux/tmux.conf` → main config
+- **Your customizations**: `~/.config/tmux/tmux.conf.local` ← Edit this file!
+
+**If you already have Oh My Tmux:**
+- The script will detect and skip installation
+- Your customizations in `~/.config/tmux/tmux.conf.local` are preserved
+
+**Key bindings (Oh My Tmux defaults):**
 - Prefix: `Ctrl-a` (instead of default `Ctrl-b`)
-- Split horizontal: `Ctrl-a |`
-- Split vertical: `Ctrl-a -`
+- Split horizontal: `Ctrl-a -`
+- Split vertical: `Ctrl-a |`
 - Reload config: `Ctrl-a r`
-- Switch panes: `Alt-Arrow keys`
+- Create session: `Ctrl-a C-c`
+- Find session: `Ctrl-a C-f`
+
+**For more info:**
+- See [Oh My Tmux documentation](https://github.com/gpakosz/.tmux)
+- Edit `~/.config/tmux/tmux.conf.local` for your customizations
+- Don't edit the main `.tmux.conf` (it gets overwritten on updates)
 
 ## 🖥️ OS Support
 

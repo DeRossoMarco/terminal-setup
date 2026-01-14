@@ -41,7 +41,10 @@ The script will install these missing tools:
 
 2. **~/.config/starship.toml** - Will be backed up, then updated with nice theme
 
-3. **~/.tmux.conf** - **Will NOT be created** (Oh My Tmux! detected in ~/.config/tmux/)
+3. **~/.config/tmux/** - Oh My Tmux! detected (will be preserved)
+   - Main: ~/.local/share/tmux/oh-my-tmux/.tmux.conf
+   - Symlink: ~/.config/tmux/tmux.conf
+   - Local: ~/.config/tmux/tmux.conf.local
 
 ## 💡 Recommendations
 

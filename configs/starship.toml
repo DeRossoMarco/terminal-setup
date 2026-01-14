@@ -1,5 +1,7 @@
-# Alternative Starship Configuration (Minimal)
-# Copy to ~/.config/starship.toml
+# Starship Configuration (Minimal)
+# This file is used by install.sh
+# Copy to ~/.config/starship.toml or let the install script handle it
+# For more options see: https://starship.rs/config/
 
 format = """
 $directory\

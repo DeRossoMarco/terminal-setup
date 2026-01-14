@@ -3,7 +3,7 @@
 ###############################################################################
 # Terminal Setup Script
 # Installs and configures: starship, tmux, zsh/bash, btop, gh, and more
-# Usage: curl -fsSL https://raw.githubusercontent.com/YOUR_USERNAME/terminal-setup/main/install.sh | bash
+# Usage: curl -fsSL https://raw.githubusercontent.com/DeRossoMarco/terminal-setup/main/install.sh | bash
 ###############################################################################
 
 set -e
@@ -16,7 +16,8 @@ BLUE='\033[0;34m'
 NC='\033[0m' # No Color
 
 # Script directory
-SCRIPT_DIR="$HOME/.terminal-setup"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+REPO_CONFIG_DIR="$SCRIPT_DIR/configs"
 CONFIG_DIR="$HOME/.config"
 
 ###############################################################################
@@ -106,7 +107,6 @@ install_packages() {
         local packages=(
             "starship"      # Prompt
             "tmux"          # Terminal multiplexer
-            "zsh"           # Shell
             "btop"          # System monitor
             "gh"            # GitHub CLI
             "fzf"           # Fuzzy finder
@@ -116,6 +116,8 @@ install_packages() {
             "zoxide"        # Smart cd
             "neovim"        # Text editor
             "git"           # Version control
+            "zsh-autosuggestions"    # Command suggestions
+            "zsh-syntax-highlighting" # Syntax highlighting
         )
         
         for package in "${packages[@]}"; do
@@ -221,11 +223,8 @@ setup_shell() {
     print_info "Configuring shell..."
     
     if [[ "$OS" == "macos" ]]; then
-        # Set zsh as default shell on macOS
-        if [[ "$SHELL" != *"zsh"* ]]; then
-            print_info "Setting zsh as default shell..."
-            chsh -s "$(which zsh)"
-        fi
+        # macOS uses zsh by default since Catalina (10.15)
+        print_info "Using macOS default zsh shell"
         
         # Setup .zshrc
         setup_zshrc
@@ -241,7 +240,13 @@ setup_zshrc() {
     local zshrc="$HOME/.zshrc"
     
     print_info "Configuring .zshrc..."
+    Check if already configured
+    if [ -f "$zshrc" ] && grep -q "Terminal Setup Configuration" "$zshrc"; then
+        print_info ".zshrc already configured - skipping"
+        return 0
+    fi
     
+    # 
     # Backup existing .zshrc
     if [ -f "$zshrc" ]; then
         cp "$zshrc" "$zshrc.backup.$(date +%Y%m%d_%H%M%S)"
@@ -305,9 +310,33 @@ if command -v starship &> /dev/null; then
     eval "$(starship init zsh)"
 fi
 
+# Zsh plugins (macOS Homebrew)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    [ -f /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh ] && source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+    [ -f /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ] && source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+fi
+
 # Custom functions
 mkcd() {
     mkdir -p "$1" && cd "$1"
+}
+
+# FFmpeg functions
+ffmpeg-compress() {
+    ffmpeg -i "$1" -vn -ar 44100 -ac 1 -b:a 96k "$2"
+}
+
+ffmpeg-concat() {
+    for f in *."$1"; do
+        echo "file '$f'" >> files.txt
+    done
+    ffmpeg -f concat -safe 0 -i files.txt -c copy "$2"
+    rm -f files.txt
+}
+
+# Markdown to PDF
+md2pdf() {
+    pandoc "$1" -s -V geometry:margin=1in -o "${1%.*}.pdf"
 }
 
 # Load local customizations
@@ -414,7 +443,12 @@ setup_starship() {
     
     mkdir -p "$CONFIG_DIR"
     
-    cat > "$CONFIG_DIR/starship.toml" << 'EOF'
+    # Try to use repo config file first, fall back to inline if not available
+    if [ -f "$REPO_CONFIG_DIR/starship.toml" ]; then
+        cp "$REPO_CONFIG_DIR/starship.toml" "$CONFIG_DIR/starship.toml"
+        print_success "Installed Starship configuration from repo"
+    else
+        cat > "$CONFIG_DIR/starship.toml" << 'EOF'
 # Starship Configuration
 
 format = """
@@ -484,89 +518,109 @@ format = "took [$duration](bold yellow) "
 EOF
 
     print_success "Created Starship configuration"
+    fi
 }
 
 setup_tmux() {
     # Check if Oh My Tmux is already installed
-    if [ -f "$HOME/.config/tmux/tmux.conf" ] && grep -q "Oh my tmux" "$HOME/.config/tmux/tmux.conf" 2>/dev/null; then
-        print_success "Oh My Tmux! already configured - skipping"
+    if [ -d "$HOME/.local/share/tmux/oh-my-tmux" ] || [ -L "$HOME/.config/tmux/tmux.conf" ]; then
+        print_success "Oh My Tmux! already installed"
+        print_info "Main config: ~/.local/share/tmux/oh-my-tmux/.tmux.conf"
+        print_info "Symlink: ~/.config/tmux/tmux.conf"
+        print_info "User customizations: ~/.config/tmux/tmux.conf.local"
         return 0
     fi
     
-    # Check for existing tmux.conf
-    if [ -f "$HOME/.tmux.conf" ]; then
+    # Check for existing simple tmux.conf
+    if [ -f "$HOME/.tmux.conf" ] && [ ! -L "$HOME/.tmux.conf" ]; then
         print_info "Existing .tmux.conf found - skipping tmux setup"
+        print_info "To upgrade to Oh My Tmux, backup and remove ~/.tmux.conf first"
         return 0
     fi
     
-    print_info "Configuring tmux..."
+    print_info "Installing Oh My Tmux!..."
     
+    # Create directories
+    mkdir -p "$HOME/.local/share/tmux"
+    mkdir -p "$HOME/.config/tmux"
+    
+    # Clone Oh My Tmux
+    if [ ! -d "$HOME/.local/share/tmux/oh-my-tmux" ]; then
+        print_info "Downloading Oh My Tmux from GitHub..."
+        if ! git clone https://github.com/gpakosz/.tmux.git "$HOME/.local/share/tmux/oh-my-tmux" 2>/dev/null; then
+            print_warning "Failed to clone Oh My Tmux, using simple config instead"
+            install_simple_tmux
+            return 0
+        fi
+        print_success "Oh My Tmux! downloaded to ~/.local/share/tmux/oh-my-tmux/"
+    fi
+    
+    # Create symlink to main config
+    if [ ! -e "$HOME/.config/tmux/tmux.conf" ]; then
+        ln -sf "$HOME/.local/share/tmux/oh-my-tmux/.tmux.conf" "$HOME/.config/tmux/tmux.conf"
+        print_success "Created symlink: ~/.config/tmux/tmux.conf"
+    fi
+    
+    # Copy local config from repo or Oh My Tmux template
+    if [ ! -f "$HOME/.config/tmux/tmux.conf.local" ]; then
+        if [ -f "$REPO_CONFIG_DIR/tmux.conf.local" ]; then
+            cp "$REPO_CONFIG_DIR/tmux.conf.local" "$HOME/.config/tmux/tmux.conf.local"
+            print_success "Installed custom tmux.conf.local from repo"
+        elif [ -f "$HOME/.local/share/tmux/oh-my-tmux/.tmux.conf.local" ]; then
+            cp "$HOME/.local/share/tmux/oh-my-tmux/.tmux.conf.local" "$HOME/.config/tmux/tmux.conf.local"
+            print_success "Created ~/.config/tmux/tmux.conf.local from template"
+        fi
+    fi
+    
+    print_success "Oh My Tmux! installation complete"
+    print_info "Edit ~/.config/tmux/tmux.conf.local to customize your tmux setup"
+}
+
+install_simple_tmux() {
+    print_info "Installing simple tmux config..."
+    
+    # Use inline minimal config as fallback (Oh My Tmux requires full repo structure)
     cat > "$HOME/.tmux.conf" << 'EOF'
-# Tmux Configuration
+# Tmux Configuration (Minimal)
 
-# Change prefix to Ctrl-a
+# Prefix
+set -g prefix C-a
 unbind C-b
-set-option -g prefix C-a
-bind-key C-a send-prefix
+bind C-a send-prefix
 
-# Enable mouse support
+# Mouse
 set -g mouse on
 
-# Start windows and panes at 1, not 0
+# Indexing
 set -g base-index 1
 setw -g pane-base-index 1
-
-# Renumber windows when one is closed
 set -g renumber-windows on
 
-# Increase scrollback buffer size
-set -g history-limit 50000
-
-# Enable 256 colors
+# Colors
 set -g default-terminal "screen-256color"
+
+# History
+set -g history-limit 50000
 
 # Status bar
 set -g status-style 'bg=#1e1e2e fg=#cdd6f4'
 set -g status-left '#[bg=#89b4fa,fg=#1e1e2e,bold] #S '
 set -g status-right '#[bg=#89b4fa,fg=#1e1e2e,bold] %Y-%m-%d %H:%M '
-set -g status-left-length 40
-set -g status-right-length 100
 
-# Window status
-setw -g window-status-current-style 'fg=#1e1e2e bg=#f5c2e7 bold'
-setw -g window-status-current-format ' #I:#W '
-setw -g window-status-style 'fg=#cdd6f4 bg=#313244'
-setw -g window-status-format ' #I:#W '
-
-# Pane borders
-set -g pane-border-style 'fg=#313244'
-set -g pane-active-border-style 'fg=#89b4fa'
-
-# Split panes using | and -
+# Split panes
 bind | split-window -h -c "#{pane_current_path}"
 bind - split-window -v -c "#{pane_current_path}"
-unbind '"'
-unbind %
 
 # Reload config
-bind r source-file ~/.tmux.conf \; display "Config reloaded!"
-
-# Switch panes using Alt-arrow without prefix
-bind -n M-Left select-pane -L
-bind -n M-Right select-pane -R
-bind -n M-Up select-pane -U
-bind -n M-Down select-pane -D
+bind r source-file ~/.tmux.conf \; display "Reloaded!"
 
 # Vi mode
 set-window-option -g mode-keys vi
-bind-key -T copy-mode-vi 'v' send -X begin-selection
-bind-key -T copy-mode-vi 'y' send -X copy-selection-and-cancel
 EOF
-
-    print_success "Created tmux configuration"
+        print_success "Created minimal tmux configuration"
+    fi
 }
-
-setup_btop() {
+print_success "Created minimal tmux configuration"btop() {
     print_info "Configuring btop..."
     
     mkdir -p "$CONFIG_DIR/btop"
@@ -716,10 +770,14 @@ main() {
     echo "  3. Start tmux with: tmux"
     echo "  4. Open btop with: btop"
     echo ""
-    print_info "Configuration files created:"
+    print_info "Configuration files:"
     echo "  - ~/.zshrc or ~/.bashrc"
     echo "  - ~/.config/starship.toml"
-    echo "  - ~/.tmux.conf"
+    if [ -d "$HOME/.config/tmux" ]; then
+        echo "  - ~/.config/tmux/ (Oh My Tmux!)"
+    elif [ -f "$HOME/.tmux.conf" ]; then
+        echo "  - ~/.tmux.conf"
+    fi
     echo "  - ~/.config/btop/btop.conf"
     echo ""
     print_info "Happy coding! ✨"
