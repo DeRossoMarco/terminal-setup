@@ -279,6 +279,7 @@ zstyle ':completion:*' menu select
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 
 # Aliases
+alias cl='clear'
 alias ll='eza -lah --icons --git'
 alias ls='eza --icons'
 alias la='eza -a --icons'
