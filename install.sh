@@ -452,9 +452,8 @@ setup_starship() {
 # Starship Configuration
 
 format = """
-[┌───────────────────>](bold green)
-[│](bold green)$directory$git_branch$git_status
-[└─>](bold green) """
+$directory$git_branch$git_status
+$character """
 
 [character]
 success_symbol = "[➜](bold green)"
@@ -522,66 +521,20 @@ EOF
 }
 
 setup_tmux() {
-    # Check if Oh My Tmux is already installed
-    if [ -d "$HOME/.local/share/tmux/oh-my-tmux" ] || [ -L "$HOME/.config/tmux/tmux.conf" ]; then
-        print_success "Oh My Tmux! already installed"
-        print_info "Main config: ~/.local/share/tmux/oh-my-tmux/.tmux.conf"
-        print_info "Symlink: ~/.config/tmux/tmux.conf"
-        print_info "User customizations: ~/.config/tmux/tmux.conf.local"
-        return 0
-    fi
-    
-    # Check for existing simple tmux.conf
-    if [ -f "$HOME/.tmux.conf" ] && [ ! -L "$HOME/.tmux.conf" ]; then
-        print_info "Existing .tmux.conf found - skipping tmux setup"
-        print_info "To upgrade to Oh My Tmux, backup and remove ~/.tmux.conf first"
-        return 0
-    fi
-    
-    print_info "Installing Oh My Tmux!..."
+    print_info "Setting up tmux configuration..."
     
     # Create directories
-    mkdir -p "$HOME/.local/share/tmux"
     mkdir -p "$HOME/.config/tmux"
     
-    # Clone Oh My Tmux
-    if [ ! -d "$HOME/.local/share/tmux/oh-my-tmux" ]; then
-        print_info "Downloading Oh My Tmux from GitHub..."
-        if ! git clone https://github.com/gpakosz/.tmux.git "$HOME/.local/share/tmux/oh-my-tmux" 2>/dev/null; then
-            print_warning "Failed to clone Oh My Tmux, using simple config instead"
-            install_simple_tmux
-            return 0
-        fi
-        print_success "Oh My Tmux! downloaded to ~/.local/share/tmux/oh-my-tmux/"
+    # Check if config already exists
+    if [ -f "$HOME/.config/tmux/tmux.conf" ]; then
+        print_info "Tmux config already exists - skipping"
+        return 0
     fi
     
-    # Create symlink to main config
-    if [ ! -e "$HOME/.config/tmux/tmux.conf" ]; then
-        ln -sf "$HOME/.local/share/tmux/oh-my-tmux/.tmux.conf" "$HOME/.config/tmux/tmux.conf"
-        print_success "Created symlink: ~/.config/tmux/tmux.conf"
-    fi
-    
-    # Copy local config from repo or Oh My Tmux template
-    if [ ! -f "$HOME/.config/tmux/tmux.conf.local" ]; then
-        if [ -f "$REPO_CONFIG_DIR/tmux.conf.local" ]; then
-            cp "$REPO_CONFIG_DIR/tmux.conf.local" "$HOME/.config/tmux/tmux.conf.local"
-            print_success "Installed custom tmux.conf.local from repo"
-        elif [ -f "$HOME/.local/share/tmux/oh-my-tmux/.tmux.conf.local" ]; then
-            cp "$HOME/.local/share/tmux/oh-my-tmux/.tmux.conf.local" "$HOME/.config/tmux/tmux.conf.local"
-            print_success "Created ~/.config/tmux/tmux.conf.local from template"
-        fi
-    fi
-    
-    print_success "Oh My Tmux! installation complete"
-    print_info "Edit ~/.config/tmux/tmux.conf.local to customize your tmux setup"
-}
-
-install_simple_tmux() {
-    print_info "Installing simple tmux config..."
-    
-    # Use inline minimal config as fallback (Oh My Tmux requires full repo structure)
-    cat > "$HOME/.tmux.conf" << 'EOF'
-# Tmux Configuration (Minimal)
+    # Create tmux config
+    cat > "$HOME/.config/tmux/tmux.conf" << 'EOF'
+# Tmux Configuration
 
 # Prefix
 set -g prefix C-a
@@ -612,12 +565,17 @@ bind | split-window -h -c "#{pane_current_path}"
 bind - split-window -v -c "#{pane_current_path}"
 
 # Reload config
-bind r source-file ~/.tmux.conf \; display "Reloaded!"
+bind r source-file ~/.config/tmux/tmux.conf \; display "Reloaded!"
 
 # Vi mode
 set-window-option -g mode-keys vi
+
+# Load local config
+if-shell "[ -f ~/.config/tmux/tmux.conf.local ]" "source ~/.config/tmux/tmux.conf.local"
 EOF
-    print_success "Created minimal tmux configuration"
+    
+    print_success "Created tmux configuration at ~/.config/tmux/tmux.conf"
+    print_info "You can customize it by editing ~/.config/tmux/tmux.conf.local"
 }
 
 setup_btop() {
@@ -773,11 +731,8 @@ main() {
     print_info "Configuration files:"
     echo "  - ~/.zshrc or ~/.bashrc"
     echo "  - ~/.config/starship.toml"
-    if [ -d "$HOME/.config/tmux" ]; then
-        echo "  - ~/.config/tmux/ (Oh My Tmux!)"
-    elif [ -f "$HOME/.tmux.conf" ]; then
-        echo "  - ~/.tmux.conf"
-    fi
+    echo "  - ~/.config/tmux/tmux.conf"
+    echo "  - ~/.config/tmux/tmux.conf.local (for customizations)"
     echo "  - ~/.config/btop/btop.conf"
     echo ""
     print_info "Happy coding! ✨"
