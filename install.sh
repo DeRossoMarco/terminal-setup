@@ -617,10 +617,10 @@ bind r source-file ~/.tmux.conf \; display "Reloaded!"
 # Vi mode
 set-window-option -g mode-keys vi
 EOF
-        print_success "Created minimal tmux configuration"
-    fi
+    print_success "Created minimal tmux configuration"
 }
-print_success "Created minimal tmux configuration"btop() {
+
+btop() {
     print_info "Configuring btop..."
     
     mkdir -p "$CONFIG_DIR/btop"
