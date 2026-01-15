@@ -620,7 +620,7 @@ EOF
     print_success "Created minimal tmux configuration"
 }
 
-btop() {
+setup_btop() {
     print_info "Configuring btop..."
     
     mkdir -p "$CONFIG_DIR/btop"
