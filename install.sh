@@ -20,6 +20,50 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_CONFIG_DIR="$SCRIPT_DIR/configs"
 CONFIG_DIR="$HOME/.config"
 
+# Selection state
+INTERACTIVE_MODE=false
+TOOLS_ARG=""
+EXCLUDE_TOOLS_ARG=""
+
+ALL_TOOLS=(
+    "shell"
+    "tmux"
+    "btop"
+    "starship"
+    "gh"
+    "fzf"
+    "ripgrep"
+    "bat"
+    "eza"
+    "zoxide"
+    "neovim"
+    "git"
+    "git-config"
+    "zsh"
+    "zsh-plugins"
+    "nerd-font"
+)
+
+DEFAULT_TOOLS=(
+    "shell"
+    "tmux"
+    "btop"
+    "starship"
+    "gh"
+    "fzf"
+    "ripgrep"
+    "bat"
+    "eza"
+    "zoxide"
+    "neovim"
+    "git"
+    "git-config"
+    "zsh-plugins"
+    "nerd-font"
+)
+
+SELECTED_TOOLS=()
+
 ###############################################################################
 # Helper Functions
 ###############################################################################
@@ -42,6 +86,216 @@ print_error() {
 
 command_exists() {
     command -v "$1" >/dev/null 2>&1
+}
+
+contains_tool() {
+    local needle="$1"
+    local tool
+    for tool in "${SELECTED_TOOLS[@]}"; do
+        if [[ "$tool" == "$needle" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+is_valid_tool() {
+    local needle="$1"
+    local tool
+    for tool in "${ALL_TOOLS[@]}"; do
+        if [[ "$tool" == "$needle" ]]; then
+            return 0
+        fi
+    done
+    return 1
+}
+
+add_tool() {
+    local tool="$1"
+    if ! contains_tool "$tool"; then
+        SELECTED_TOOLS+=("$tool")
+    fi
+}
+
+remove_tool() {
+    local tool="$1"
+    local updated=()
+    local t
+    for t in "${SELECTED_TOOLS[@]}"; do
+        if [[ "$t" != "$tool" ]]; then
+            updated+=("$t")
+        fi
+    done
+    SELECTED_TOOLS=("${updated[@]}")
+}
+
+apply_csv_tools() {
+    local csv="$1"
+    local mode="$2" # set or exclude
+    local raw
+    local token
+
+    raw="${csv// /}"
+    IFS=',' read -r -a parsed <<< "$raw"
+
+    if [[ "$mode" == "set" ]]; then
+        SELECTED_TOOLS=()
+    fi
+
+    for token in "${parsed[@]}"; do
+        [ -n "$token" ] || continue
+        if ! is_valid_tool "$token"; then
+            print_error "Unknown tool: $token"
+            print_error "Use --help to see available tool names."
+            exit 1
+        fi
+
+        if [[ "$mode" == "set" ]]; then
+            add_tool "$token"
+        else
+            remove_tool "$token"
+        fi
+    done
+}
+
+resolve_tool_dependencies() {
+    if contains_tool "git-config" && ! contains_tool "git"; then
+        add_tool "git"
+        print_info "Auto-enabled dependency: git (required by git-config)"
+    fi
+
+    if contains_tool "zsh-plugins" && ! contains_tool "git"; then
+        add_tool "git"
+        print_info "Auto-enabled dependency: git (required by zsh-plugins)"
+    fi
+
+    if [[ "$OS" == "linux" ]] && contains_tool "zsh-plugins" && ! contains_tool "zsh"; then
+        add_tool "zsh"
+        print_info "Auto-enabled dependency: zsh (required by zsh-plugins on Linux)"
+    fi
+
+    if [[ "$OS" != "macos" ]] && contains_tool "nerd-font"; then
+        remove_tool "nerd-font"
+        print_warning "Removed unsupported selection: nerd-font (macOS only in this script)"
+    fi
+}
+
+print_selected_tools() {
+    local out=""
+    local tool
+    for tool in "${SELECTED_TOOLS[@]}"; do
+        if [ -z "$out" ]; then
+            out="$tool"
+        else
+            out="$out, $tool"
+        fi
+    done
+    print_info "Selected tools: ${out:-none}"
+}
+
+prompt_tool_selection() {
+    local tool
+    local answer
+    local prompt
+
+    print_info "Interactive selection mode"
+    print_info "Choose tools to install/configure:"
+
+    for tool in "${ALL_TOOLS[@]}"; do
+        if [[ "$tool" == "nerd-font" && "$OS" != "macos" ]]; then
+            continue
+        fi
+
+        if contains_tool "$tool"; then
+            prompt="Install ${tool}? [Y/n]: "
+            read -r -p "$prompt" answer
+            if [[ "$answer" =~ ^[Nn]$ ]]; then
+                remove_tool "$tool"
+            fi
+        else
+            prompt="Install ${tool}? [y/N]: "
+            read -r -p "$prompt" answer
+            if [[ "$answer" =~ ^[Yy]$ ]]; then
+                add_tool "$tool"
+            fi
+        fi
+    done
+}
+
+show_help() {
+    cat <<'EOF'
+Usage: ./install.sh [options]
+
+Options:
+  --interactive                Prompt for each tool selection
+  --tools <csv>                Install only the listed tools
+  --exclude-tools <csv>        Remove listed tools from current selection
+  -h, --help                   Show this help
+
+Tool names:
+  shell, tmux, btop, starship, gh, fzf, ripgrep, bat, eza, zoxide,
+  neovim, git, git-config, zsh, zsh-plugins, nerd-font
+
+Examples:
+  ./install.sh --interactive
+  ./install.sh --tools tmux,starship,git,shell
+  ./install.sh --exclude-tools btop,gh
+EOF
+}
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --interactive)
+                INTERACTIVE_MODE=true
+                shift
+                ;;
+            --tools)
+                if [[ -z "${2:-}" ]]; then
+                    print_error "--tools requires a comma-separated value"
+                    exit 1
+                fi
+                TOOLS_ARG="$2"
+                shift 2
+                ;;
+            --exclude-tools)
+                if [[ -z "${2:-}" ]]; then
+                    print_error "--exclude-tools requires a comma-separated value"
+                    exit 1
+                fi
+                EXCLUDE_TOOLS_ARG="$2"
+                shift 2
+                ;;
+            -h|--help)
+                show_help
+                exit 0
+                ;;
+            *)
+                print_error "Unknown argument: $1"
+                print_error "Use --help to see supported options."
+                exit 1
+                ;;
+        esac
+    done
+}
+
+prepare_tool_selection() {
+    SELECTED_TOOLS=("${DEFAULT_TOOLS[@]}")
+
+    if [[ -n "$TOOLS_ARG" ]]; then
+        apply_csv_tools "$TOOLS_ARG" "set"
+    fi
+
+    if [[ -n "$EXCLUDE_TOOLS_ARG" ]]; then
+        apply_csv_tools "$EXCLUDE_TOOLS_ARG" "exclude"
+    fi
+
+    if [[ "$INTERACTIVE_MODE" == true ]]; then
+        prompt_tool_selection
+    fi
+
+    resolve_tool_dependencies
+    print_selected_tools
 }
 
 ###############################################################################
@@ -101,26 +355,29 @@ install_packages() {
     print_info "Installing packages..."
     
     if [[ "$OS" == "macos" ]]; then
-        # macOS packages
-        brew update
-        
-        local packages=(
-            "tmux"          # Terminal multiplexer
-            "btop"          # System monitor
-            "starship"      # Modern prompt
-            "gh"            # GitHub CLI
-            "fzf"           # Fuzzy finder
-            "ripgrep"       # Better grep
-            "bat"           # Better cat
-            "eza"           # Better ls
-            "zoxide"        # Smart cd
-            "neovim"        # Text editor
-            "git"           # Version control
-            "zsh-autosuggestions"    # Command suggestions
-            "zsh-syntax-highlighting" # Syntax highlighting
-            "zsh-history-substring-search" # History substring search
-        )
-        
+        local packages=()
+
+        contains_tool "tmux" && packages+=("tmux")
+        contains_tool "btop" && packages+=("btop")
+        contains_tool "starship" && packages+=("starship")
+        contains_tool "gh" && packages+=("gh")
+        contains_tool "fzf" && packages+=("fzf")
+        contains_tool "ripgrep" && packages+=("ripgrep")
+        contains_tool "bat" && packages+=("bat")
+        contains_tool "eza" && packages+=("eza")
+        contains_tool "zoxide" && packages+=("zoxide")
+        contains_tool "neovim" && packages+=("neovim")
+        contains_tool "git" && packages+=("git")
+        contains_tool "zsh" && packages+=("zsh")
+
+        if contains_tool "zsh-plugins"; then
+            packages+=("zsh-autosuggestions" "zsh-syntax-highlighting" "zsh-history-substring-search")
+        fi
+
+        if [[ ${#packages[@]} -gt 0 ]]; then
+            brew update
+        fi
+
         for package in "${packages[@]}"; do
             if ! brew list "$package" &>/dev/null; then
                 print_info "Installing $package..."
@@ -130,58 +387,57 @@ install_packages() {
             fi
         done
 
-        install_nerd_font_macos
+        if contains_tool "nerd-font"; then
+            install_nerd_font_macos
+        fi
         
     elif [[ "$OS" == "linux" ]]; then
+        local packages=()
+
+        contains_tool "tmux" && packages+=("tmux")
+        contains_tool "zsh" && packages+=("zsh")
+        contains_tool "fzf" && packages+=("fzf")
+        contains_tool "ripgrep" && packages+=("ripgrep")
+        contains_tool "bat" && packages+=("bat")
+        contains_tool "zoxide" && packages+=("zoxide")
+        contains_tool "neovim" && packages+=("neovim")
+        contains_tool "git" && packages+=("git")
+
+        if contains_tool "starship" || contains_tool "gh"; then
+            packages+=("curl")
+        fi
+
+        if contains_tool "eza"; then
+            packages+=("wget")
+        fi
+
         # Linux packages
         if command_exists apt-get; then
             # Debian/Ubuntu
             sudo apt-get update
-            sudo apt-get install -y \
-                tmux \
-                zsh \
-                fzf \
-                ripgrep \
-                bat \
-                zoxide \
-                neovim \
-                git \
-                curl \
-                wget \
-                build-essential
+            if [[ ${#packages[@]} -gt 0 ]]; then
+                sudo apt-get install -y "${packages[@]}"
+            fi
                 
         elif command_exists yum; then
             # RHEL/CentOS/Fedora
-            sudo yum install -y \
-                tmux \
-                zsh \
-                fzf \
-                ripgrep \
-                bat \
-                neovim \
-                git \
-                curl \
-                wget
+            if [[ ${#packages[@]} -gt 0 ]]; then
+                sudo yum install -y "${packages[@]}"
+            fi
                 
         elif command_exists dnf; then
             # Fedora
-            sudo dnf install -y \
-                tmux \
-                zsh \
-                fzf \
-                ripgrep \
-                bat \
-                neovim \
-                git \
-                curl \
-                wget
+            if [[ ${#packages[@]} -gt 0 ]]; then
+                sudo dnf install -y "${packages[@]}"
+            fi
         fi
         
-        # Install zsh plugins and autosuggestions
-        install_zsh_plugins_linux
+        if contains_tool "zsh-plugins"; then
+            install_zsh_plugins_linux
+        fi
         
         # Install btop (may need manual install)
-        if ! command_exists btop; then
+        if contains_tool "btop" && ! command_exists btop; then
             print_info "Installing btop..."
             if command_exists snap; then
                 sudo snap install btop
@@ -191,7 +447,7 @@ install_packages() {
         fi
         
         # Install GitHub CLI
-        if ! command_exists gh; then
+        if contains_tool "gh" && ! command_exists gh; then
             print_info "Installing GitHub CLI..."
             if [[ "$DISTRO" == "ubuntu" ]] || [[ "$DISTRO" == "debian" ]]; then
                 curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
@@ -202,7 +458,7 @@ install_packages() {
         fi
         
         # Install eza (modern ls replacement)
-        if ! command_exists eza; then
+        if contains_tool "eza" && ! command_exists eza; then
             print_info "Installing eza..."
             if command_exists cargo; then
                 cargo install eza
@@ -212,7 +468,7 @@ install_packages() {
         fi
 
         # Install Starship prompt
-        if ! command_exists starship; then
+        if contains_tool "starship" && ! command_exists starship; then
             print_info "Installing Starship..."
             if command_exists curl; then
                 curl -sS https://starship.rs/install.sh | sh -s -- -y
@@ -359,10 +615,19 @@ fi
 alias cl="printf '\33c\e[3J'"
 alias h='history'
 alias please='sudo'
-alias cat='bat --style=plain'
-alias top='btop'
-alias vim='nvim'
-alias vi='nvim'
+
+if command -v bat &> /dev/null; then
+    alias cat='bat --style=plain'
+fi
+
+if command -v btop &> /dev/null; then
+    alias top='btop'
+fi
+
+if command -v nvim &> /dev/null; then
+    alias vim='nvim'
+    alias vi='nvim'
+fi
 
 # Git aliases
 alias gs='git status'
@@ -670,11 +935,17 @@ setup_git() {
 ###############################################################################
 
 main() {
+    parse_args "$@"
+
     print_info "Starting terminal setup..."
     echo ""
     
     # Detect OS
     detect_os
+    echo ""
+
+    # Tool selection
+    prepare_tool_selection
     echo ""
     
     # Install package manager
@@ -686,39 +957,77 @@ main() {
     echo ""
     
     # Setup shell
-    setup_shell
-    echo ""
-    
+    if contains_tool "shell"; then
+        setup_shell
+        echo ""
+    fi
+
     # Setup tools
-    setup_tmux
-    setup_btop
-    setup_starship
-    setup_git
+    if contains_tool "tmux"; then
+        setup_tmux
+    fi
+    if contains_tool "btop"; then
+        setup_btop
+    fi
+    if contains_tool "starship"; then
+        setup_starship
+    fi
+    if contains_tool "git-config"; then
+        setup_git
+    fi
     echo ""
     
     print_success "Installation complete! 🎉"
     echo ""
     print_info "Next steps:"
-    echo "  1. Reload shell: source ~/.zshrc"
-    echo "  2. Login to GitHub: gh auth login"
-    echo "  3. Start tmux: tmux"
-    echo "  4. Open system monitor: btop"
-    if [[ "$OS" == "macos" ]]; then
-        echo "  5. Set terminal font to: Hack Nerd Font"
+
+    if contains_tool "shell"; then
+        if command_exists zsh; then
+            echo "  - Reload shell: source ~/.zshrc"
+        else
+            echo "  - Reload shell: source ~/.bashrc"
+        fi
     fi
+    if contains_tool "gh"; then
+        echo "  - Login to GitHub: gh auth login"
+    fi
+    if contains_tool "tmux"; then
+        echo "  - Start tmux: tmux"
+    fi
+    if contains_tool "btop"; then
+        echo "  - Open system monitor: btop"
+    fi
+    if [[ "$OS" == "macos" ]] && contains_tool "nerd-font"; then
+        echo "  - Set terminal font to: Hack Nerd Font"
+    fi
+
     echo ""
     print_info "Key bindings:"
-    echo "  - Ctrl+R: Fuzzy search history"
-    echo "  - Up/Down arrows: Search history (substring match)"
-    echo "  - Ctrl+B: tmux prefix"
+    if contains_tool "shell"; then
+        echo "  - Ctrl+R: Fuzzy search history"
+        echo "  - Up/Down arrows: Search history (substring match)"
+    fi
+    if contains_tool "tmux"; then
+        echo "  - Ctrl+B: tmux prefix"
+    fi
     echo ""
     print_info "Configuration files:"
-    echo "  - ~/.zshrc (shell config)"
-    echo "  - ~/.config/starship.toml (starship prompt)"
-    echo "  - ~/.config/tmux/tmux.conf (tmux config)"
+    if contains_tool "shell"; then
+        if command_exists zsh; then
+            echo "  - ~/.zshrc (shell config)"
+        else
+            echo "  - ~/.bashrc (shell config)"
+        fi
+    fi
+    if contains_tool "starship"; then
+        echo "  - ~/.config/starship.toml (starship prompt)"
+    fi
+    if contains_tool "tmux"; then
+        echo "  - ~/.config/tmux/tmux.conf (tmux config)"
+    fi
     echo ""
     print_info "Happy coding! ✨"
 }
 
 # Run main function
-main
+main "$@"

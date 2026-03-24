@@ -55,6 +55,58 @@ chmod +x install.sh
 ./install.sh
 ```
 
+### Select tools to install
+
+Interactive selection:
+
+```bash
+./install.sh --interactive
+```
+
+Install only specific tools:
+
+```bash
+./install.sh --tools tmux,starship,git,shell
+```
+
+Start from defaults and exclude some tools:
+
+```bash
+./install.sh --exclude-tools btop,gh
+```
+
+Mix both:
+
+```bash
+./install.sh --tools shell,tmux,zsh-plugins --exclude-tools tmux
+```
+
+Supported tool names:
+
+- shell
+- tmux
+- btop
+- starship
+- gh
+- fzf
+- ripgrep
+- bat
+- eza
+- zoxide
+- neovim
+- git
+- git-config
+- zsh
+- zsh-plugins
+- nerd-font (macOS only)
+
+Dependency handling:
+
+- `git-config` auto-enables `git`
+- `zsh-plugins` auto-enables `git`
+- On Linux, `zsh-plugins` auto-enables `zsh`
+- `nerd-font` is ignored on Linux (macOS-only in this script)
+
 ## Reset To Default
 
 One-line remove:
