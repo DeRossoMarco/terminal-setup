@@ -117,6 +117,7 @@ install_packages() {
             "git"           # Version control
             "zsh-autosuggestions"    # Command suggestions
             "zsh-syntax-highlighting" # Syntax highlighting
+            "zsh-history-substring-search" # History substring search
         )
         
         for package in "${packages[@]}"; do
@@ -127,6 +128,8 @@ install_packages() {
                 print_info "$package already installed"
             fi
         done
+
+        install_nerd_font_macos
         
     elif [[ "$OS" == "linux" ]]; then
         # Linux packages
@@ -209,6 +212,22 @@ install_packages() {
     fi
     
     print_success "Package installation complete"
+}
+
+install_nerd_font_macos() {
+    print_info "Checking Nerd Font for eza icons..."
+
+    if ! brew list --cask font-hack-nerd-font &>/dev/null; then
+        print_info "Installing Hack Nerd Font..."
+        if brew install --cask font-hack-nerd-font; then
+            print_success "Hack Nerd Font installed"
+        else
+            print_warning "Could not install Hack Nerd Font automatically"
+            print_warning "Install manually with: brew install --cask font-hack-nerd-font"
+        fi
+    else
+        print_info "Hack Nerd Font already installed"
+    fi
 }
 
 ###############################################################################
@@ -295,30 +314,18 @@ compinit
 zstyle ':completion:*' menu select
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 
-# Icon fallback: set TERMINAL_SETUP_DISABLE_ICONS=1 to force plain output
-TERMINAL_SETUP_DISABLE_ICONS="${TERMINAL_SETUP_DISABLE_ICONS:-0}"
-
-# Clear screen + scrollback
-cl() {
-    clear
-    printf '\033[3J'
-}
-
 # Aliases
 if command -v eza &> /dev/null; then
-    if [[ "$TERMINAL_SETUP_DISABLE_ICONS" == "1" ]] || [[ "${LC_CTYPE:-${LANG:-}}" != *"UTF-8"* ]]; then
-        alias ll='eza -lah --git'
-        alias ls='eza'
-        alias la='eza -a'
-    else
-        alias ll='eza -lah --icons --git'
-        alias ls='eza --icons'
-        alias la='eza -a --icons'
-    fi
+    alias ll='eza -lh --icons --git'
+    alias ls='eza --icons'
+    alias la='eza -lha --icons'
 else
-    alias ll='ls -lah'
-    alias la='ls -A'
+    alias ll='ls -lh'
+    alias la='ls -lha'
 fi
+alias cl="printf '\33c\e[3J'"
+alias h='history'
+alias please='sudo'
 alias cat='bat --style=plain'
 alias top='btop'
 alias vim='nvim'
@@ -359,9 +366,14 @@ else
     [ -f $HOME/.zsh/zsh-history-substring-search/zsh-history-substring-search.zsh ] && source $HOME/.zsh/zsh-history-substring-search/zsh-history-substring-search.zsh
 fi
 
-# Bind keys for history-substring-search
-bindkey '^[[A' history-substring-search-up
-bindkey '^[[B' history-substring-search-down
+# Bind keys for history search (safe fallback when widget is unavailable)
+if [[ ${+widgets[history-substring-search-up]} -eq 1 ]] && [[ ${+widgets[history-substring-search-down]} -eq 1 ]]; then
+    bindkey '^[[A' history-substring-search-up
+    bindkey '^[[B' history-substring-search-down
+else
+    bindkey '^[[A' up-line-or-history
+    bindkey '^[[B' down-line-or-history
+fi
 
 # Fzf history search (Ctrl+R for fuzzy history)
 if command -v fzf &> /dev/null; then
@@ -411,30 +423,18 @@ shopt -s cdspell
 shopt -s dirspell
 shopt -s autocd 2>/dev/null
 
-# Clear screen + scrollback
-cl() {
-    clear
-    printf '\033[3J'
-}
-
-# Icon fallback: set TERMINAL_SETUP_DISABLE_ICONS=1 to force plain output
-TERMINAL_SETUP_DISABLE_ICONS="${TERMINAL_SETUP_DISABLE_ICONS:-0}"
-
 # Aliases
 if command -v eza &> /dev/null; then
-    if [[ "$TERMINAL_SETUP_DISABLE_ICONS" == "1" ]] || [[ "${LC_CTYPE:-${LANG:-}}" != *"UTF-8"* ]]; then
-        alias ll='eza -lah --git'
-        alias ls='eza'
-        alias la='eza -a'
-    else
-        alias ll='eza -lah --icons --git'
-        alias ls='eza --icons'
-        alias la='eza -a --icons'
-    fi
+    alias ll='eza -lh --icons --git'
+    alias ls='eza --icons'
+    alias la='eza -lha --icons'
 else
-    alias ll='ls -lah'
-    alias la='ls -A'
+    alias ll='ls -lh'
+    alias la='ls -lha'
 fi
+alias cl="printf '\33c\e[3J'"
+alias h='history'
+alias please='sudo'
 
 if command -v bat &> /dev/null; then
     alias cat='bat --style=plain'
@@ -503,6 +503,21 @@ setup_tmux() {
     if [ -f "$REPO_CONFIG_DIR/tmux.conf.local" ]; then
         cp "$REPO_CONFIG_DIR/tmux.conf.local" "$HOME/.config/tmux/tmux.conf.local"
         print_success "Installed tmux.conf.local customizations"
+    fi
+
+    # Ensure tmux loads this config by default
+    if [ -e "$HOME/.tmux.conf" ] && [ ! -L "$HOME/.tmux.conf" ]; then
+        mv "$HOME/.tmux.conf" "$HOME/.tmux.conf.backup.$(date +%Y%m%d_%H%M%S)"
+        print_info "Backed up existing ~/.tmux.conf"
+    fi
+    ln -sfn "$HOME/.config/tmux/tmux.conf" "$HOME/.tmux.conf"
+
+    if [ -f "$HOME/.config/tmux/tmux.conf.local" ]; then
+        if [ -e "$HOME/.tmux.conf.local" ] && [ ! -L "$HOME/.tmux.conf.local" ]; then
+            mv "$HOME/.tmux.conf.local" "$HOME/.tmux.conf.local.backup.$(date +%Y%m%d_%H%M%S)"
+            print_info "Backed up existing ~/.tmux.conf.local"
+        fi
+        ln -sfn "$HOME/.config/tmux/tmux.conf.local" "$HOME/.tmux.conf.local"
     fi
     
     print_info "Tmux configuration: Oh my tmux!"
@@ -632,11 +647,14 @@ main() {
     echo "  2. Login to GitHub: gh auth login"
     echo "  3. Start tmux: tmux"
     echo "  4. Open system monitor: btop"
+    if [[ "$OS" == "macos" ]]; then
+        echo "  5. Set terminal font to: Hack Nerd Font"
+    fi
     echo ""
     print_info "Key bindings:"
     echo "  - Ctrl+R: Fuzzy search history"
     echo "  - Up/Down arrows: Search history (substring match)"
-    echo "  - Ctrl+A: tmux prefix"
+    echo "  - Ctrl+B: tmux prefix"
     echo ""
     print_info "Configuration files:"
     echo "  - ~/.zshrc (shell config)"
