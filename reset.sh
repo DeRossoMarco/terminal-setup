@@ -3,7 +3,7 @@
 ###############################################################################
 # Terminal Setup Reset Script
 # Removes managed configuration and restores previous backups when available.
-# Usage: ./reset.sh [--yes]
+# Usage: ./reset.sh [--yes] [--keep-packages]
 ###############################################################################
 
 set -euo pipefail
@@ -15,9 +15,38 @@ BLUE='\033[0;34m'
 NC='\033[0m'
 
 AUTO_YES=false
-if [[ "${1:-}" == "--yes" || "${1:-}" == "-y" ]]; then
-    AUTO_YES=true
-fi
+KEEP_PACKAGES=false
+
+parse_args() {
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --yes|-y)
+                AUTO_YES=true
+                shift
+                ;;
+            --keep-packages)
+                KEEP_PACKAGES=true
+                shift
+                ;;
+            -h|--help)
+                cat <<'EOF'
+Usage: ./reset.sh [options]
+
+Options:
+  --yes, -y          Run non-interactively (skip confirmation)
+  --keep-packages    Keep installed packages and only reset configuration files
+  -h, --help         Show this help
+EOF
+                exit 0
+                ;;
+            *)
+                echo -e "${RED}[ERROR]${NC} Unknown argument: $1"
+                echo -e "${RED}[ERROR]${NC} Use --help to see supported options."
+                exit 1
+                ;;
+        esac
+    done
+}
 
 print_info() {
     echo -e "${BLUE}[INFO]${NC} $1"
@@ -163,6 +192,15 @@ remove_setup_configs() {
         rm -rf "$HOME/.zsh/zsh-history-substring-search"
         print_success "Removed $HOME/.zsh/zsh-history-substring-search"
     fi
+
+    # Linux Nerd Font installed by install.sh
+    if [[ -d "$HOME/.local/share/fonts/NerdFonts/Hack" ]]; then
+        rm -rf "$HOME/.local/share/fonts/NerdFonts/Hack"
+        print_success "Removed $HOME/.local/share/fonts/NerdFonts/Hack"
+        if command_exists fc-cache; then
+            fc-cache -f "$HOME/.local/share/fonts" >/dev/null 2>&1 || true
+        fi
+    fi
 }
 
 uninstall_brew_packages() {
@@ -218,6 +256,92 @@ uninstall_brew_packages() {
     print_info "Homebrew itself was not removed"
 }
 
+uninstall_linux_packages() {
+    if [[ "${OSTYPE}" != linux* ]]; then
+        return 0
+    fi
+
+    print_info "Removing Linux packages installed by terminal-setup..."
+
+    local packages=(
+        "tmux"
+        "btop"
+        "starship"
+        "gh"
+        "fzf"
+        "ripgrep"
+        "bat"
+        "eza"
+        "zoxide"
+        "neovim"
+        "git"
+        "zsh"
+    )
+
+    local pkg
+    local installed=()
+
+    if command_exists apt-get; then
+        for pkg in "${packages[@]}"; do
+            if dpkg -s "$pkg" >/dev/null 2>&1; then
+                installed+=("$pkg")
+            fi
+        done
+
+        if [[ ${#installed[@]} -gt 0 ]]; then
+            sudo apt-get remove -y "${installed[@]}" || print_warning "Some apt packages could not be removed"
+            sudo apt-get autoremove -y || true
+        fi
+
+        if [[ -f /etc/apt/sources.list.d/github-cli.list ]]; then
+            sudo rm -f /etc/apt/sources.list.d/github-cli.list
+            print_success "Removed /etc/apt/sources.list.d/github-cli.list"
+        fi
+        if [[ -f /usr/share/keyrings/githubcli-archive-keyring.gpg ]]; then
+            sudo rm -f /usr/share/keyrings/githubcli-archive-keyring.gpg
+            print_success "Removed /usr/share/keyrings/githubcli-archive-keyring.gpg"
+        fi
+        sudo apt-get update || true
+    elif command_exists dnf; then
+        for pkg in "${packages[@]}"; do
+            if rpm -q "$pkg" >/dev/null 2>&1; then
+                installed+=("$pkg")
+            fi
+        done
+
+        if [[ ${#installed[@]} -gt 0 ]]; then
+            sudo dnf remove -y "${installed[@]}" || print_warning "Some dnf packages could not be removed"
+        fi
+
+        if [[ -f /etc/yum.repos.d/github-cli.repo ]]; then
+            sudo rm -f /etc/yum.repos.d/github-cli.repo
+            print_success "Removed /etc/yum.repos.d/github-cli.repo"
+        fi
+    elif command_exists yum; then
+        for pkg in "${packages[@]}"; do
+            if rpm -q "$pkg" >/dev/null 2>&1; then
+                installed+=("$pkg")
+            fi
+        done
+
+        if [[ ${#installed[@]} -gt 0 ]]; then
+            sudo yum remove -y "${installed[@]}" || print_warning "Some yum packages could not be removed"
+        fi
+
+        if [[ -f /etc/yum.repos.d/github-cli.repo ]]; then
+            sudo rm -f /etc/yum.repos.d/github-cli.repo
+            print_success "Removed /etc/yum.repos.d/github-cli.repo"
+        fi
+    else
+        print_warning "No supported Linux package manager found (apt/dnf/yum)"
+    fi
+
+    if [[ -x /usr/local/bin/starship ]]; then
+        sudo rm -f /usr/local/bin/starship || print_warning "Could not remove /usr/local/bin/starship"
+        print_success "Removed /usr/local/bin/starship"
+    fi
+}
+
 restore_shell_configs() {
     print_info "Restoring shell configuration..."
 
@@ -243,7 +367,11 @@ confirm_reset() {
 
     echo ""
     print_warning "This will remove terminal-setup managed config and try to restore previous backups."
-    print_warning "It also uninstalls related Homebrew packages, but keeps Homebrew installed."
+    if [[ "$KEEP_PACKAGES" == true ]]; then
+        print_warning "Installed packages will be kept; only configuration files are reset."
+    else
+        print_warning "It also uninstalls related packages (Homebrew on macOS, apt/dnf/yum on Linux)."
+    fi
     print_warning "It does not reset global Git settings."
     echo ""
     read -r -p "Continue? (y/N): " answer
@@ -251,6 +379,8 @@ confirm_reset() {
 }
 
 main() {
+    parse_args "$@"
+
     print_info "Starting terminal setup reset..."
 
     if ! confirm_reset; then
@@ -258,7 +388,12 @@ main() {
         exit 0
     fi
 
-    uninstall_brew_packages
+    if [[ "$KEEP_PACKAGES" != true ]]; then
+        uninstall_brew_packages
+        uninstall_linux_packages
+    else
+        print_info "Skipping package uninstallation (--keep-packages enabled)"
+    fi
     restore_shell_configs
     sanitize_zshrc_optional_tools
     remove_starship_config
@@ -269,4 +404,4 @@ main() {
     print_info "Open a new terminal session to apply changes."
 }
 
-main
+main "$@"

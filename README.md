@@ -25,7 +25,7 @@ One-command installation and configuration for a modern terminal setup on macOS 
 ### Shell Setup
 
 - macOS: configures zsh
-- Linux: prefers zsh if available, falls back to bash
+- Linux: configures bash
 
 ### Features
 
@@ -98,14 +98,20 @@ Supported tool names:
 - git-config
 - zsh
 - zsh-plugins
-- nerd-font (macOS only)
+- nerd-font
+
+Notes:
+
+- `zsh` is intended for Linux package installation workflows.
+- On macOS interactive mode, `zsh` is hidden because zsh is already provided by the OS.
+- `nerd-font` is supported on both macOS and Linux.
 
 Dependency handling:
 
 - `git-config` auto-enables `git`
 - `zsh-plugins` auto-enables `git`
 - On Linux, `zsh-plugins` auto-enables `zsh`
-- `nerd-font` is ignored on Linux (macOS-only in this script)
+- `nerd-font` installs Hack Nerd Font on macOS and Linux
 
 ## Reset To Default
 
@@ -121,7 +127,7 @@ One-line remove (non-interactive):
 curl -fsSL https://raw.githubusercontent.com/DeRossoMarco/terminal-setup/main/reset.sh | bash -s -- --yes
 ```
 
-To remove managed configuration, uninstall related Homebrew packages, and restore the latest backups:
+To remove managed configuration, uninstall related packages, and restore the latest backups:
 
 ```bash
 chmod +x reset.sh
@@ -134,17 +140,32 @@ Non-interactive mode:
 ./reset.sh --yes
 ```
 
+Keep installed packages and reset only configuration files:
+
+```bash
+./reset.sh --keep-packages
+```
+
+Non-interactive soft reset:
+
+```bash
+./reset.sh --yes --keep-packages
+```
+
 Notes:
 
-- Homebrew packages installed by this setup are removed.
+- macOS: Homebrew packages installed by this setup are removed.
+- Linux: apt/dnf/yum packages installed by this setup are removed when available.
 - Homebrew itself is kept installed.
 - Global Git settings are not reset.
+- With `--keep-packages`, package uninstall is skipped and only managed configs are reset.
 
 ## What Gets Configured
 
 ### Files
 
-- ~/.zshrc or ~/.bashrc
+- macOS: ~/.zshrc
+- Linux: ~/.bashrc
 - ~/.config/tmux/tmux.conf
 - ~/.config/btop/ (directory only, btop uses defaults until first run)
 
@@ -200,10 +221,12 @@ With zsh configuration enabled:
 
 Linux setup supports apt, yum, and dnf.
 
-Default behavior on Linux is shell-aware:
+Default behavior on Linux:
 
-- If your active shell is `bash`, zsh plugins are not installed by default.
-- To force zsh plugin setup, pass explicit tools such as `--tools shell,zsh,zsh-plugins`.
+- Shell configuration is always written to `~/.bashrc`.
+- zsh plugins are not installed by default unless explicitly requested.
+- If you install `zsh-plugins`, they are installed for zsh but not sourced by default in bash.
+- To use zsh plugins, install with `--tools shell,zsh,zsh-plugins` and switch your login shell to zsh.
 
 For zsh plugins on Linux, repositories are cloned under:
 
@@ -215,11 +238,13 @@ For zsh plugins on Linux, repositories are cloned under:
 
 1. Reload shell config:
 
+On macOS:
+
 ```bash
 source ~/.zshrc
 ```
 
-If using bash on Linux:
+On Linux:
 
 ```bash
 source ~/.bashrc
@@ -255,7 +280,7 @@ Quick checks:
 - Verify Starship is active: run `echo $STARSHIP_SHELL` (should not be empty after reloading shell).
 - Reload shell config: `source ~/.zshrc` or `source ~/.bashrc`.
 - Ensure a Nerd Font is selected in your terminal profile for icon glyphs.
-- On Linux, `eza` may be skipped if Rust/Cargo is missing; the script prints a warning in that case.
+- On Linux, the installer now tries native package-manager install for `eza` before Rust/Cargo fallback.
 
 ### Icons look broken in ls output
 
@@ -269,11 +294,20 @@ export TERMINAL_SETUP_DISABLE_ICONS=1
 
 This setup configures Starship by default.
 
-If Starship is still missing after install, install it manually and reload your shell:
+If Starship is still missing after install, install it manually and reload your shell.
+
+macOS:
 
 ```bash
 brew install starship
 source ~/.zshrc
+```
+
+Linux:
+
+```bash
+curl -sS https://starship.rs/install.sh | sh -s -- -y
+source ~/.bashrc
 ```
 
 ### Option+Delete does not delete word-by-word on macOS

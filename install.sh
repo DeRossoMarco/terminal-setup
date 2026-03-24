@@ -207,10 +207,6 @@ resolve_tool_dependencies() {
         print_info "Auto-enabled dependency: zsh (required by zsh-plugins on Linux)"
     fi
 
-    if [[ "$OS" != "macos" ]] && contains_tool "nerd-font"; then
-        remove_tool "nerd-font"
-        print_warning "Removed unsupported selection: nerd-font (macOS only in this script)"
-    fi
 }
 
 print_selected_tools() {
@@ -235,7 +231,7 @@ prompt_tool_selection() {
     print_info "Choose tools to install/configure:"
 
     for tool in "${ALL_TOOLS[@]}"; do
-        if [[ "$tool" == "nerd-font" && "$OS" != "macos" ]]; then
+        if [[ "$tool" == "zsh" && "$OS" == "macos" ]]; then
             continue
         fi
 
@@ -267,7 +263,7 @@ Options:
 
 Tool names:
   shell, tmux, btop, starship, gh, fzf, ripgrep, bat, eza, zoxide,
-  neovim, git, git-config, zsh, zsh-plugins, nerd-font
+    neovim, git, git-config, zsh (Linux), zsh-plugins, nerd-font
 
 Examples:
   ./install.sh --interactive
@@ -315,15 +311,12 @@ parse_args() {
 prepare_tool_selection() {
     SELECTED_TOOLS=("${DEFAULT_TOOLS[@]}")
 
-    # On Linux, keep defaults aligned with the active shell unless user explicitly requests tools.
+    # On Linux, keep defaults focused on bash unless user explicitly requests zsh tooling.
     if [[ "$OS" == "linux" ]] && [[ -z "$TOOLS_ARG" ]] && [[ "$INTERACTIVE_MODE" != true ]]; then
-        local current_shell="${SHELL##*/}"
-        if [[ "$current_shell" != "zsh" ]]; then
-            if contains_tool "zsh-plugins"; then
-                remove_tool "zsh-plugins"
-                print_info "Skipping zsh-plugins by default because active shell is $current_shell"
-                print_info "Enable zsh plugins explicitly with: --tools shell,zsh,zsh-plugins"
-            fi
+        if contains_tool "zsh-plugins"; then
+            remove_tool "zsh-plugins"
+            print_info "Skipping zsh-plugins by default on Linux"
+            print_info "Enable zsh plugins explicitly with: --tools shell,zsh,zsh-plugins"
         fi
     fi
 
@@ -340,6 +333,12 @@ prepare_tool_selection() {
     fi
 
     resolve_tool_dependencies
+
+    if [[ "$OS" == "linux" ]] && contains_tool "zsh-plugins"; then
+        print_warning "zsh-plugins are installed for zsh only; shell config is written to ~/.bashrc"
+        print_warning "Switch your login shell to zsh if you want those plugins active"
+    fi
+
     print_selected_tools
 }
 
@@ -440,10 +439,12 @@ install_packages() {
         local packages=()
 
         contains_tool "tmux" && packages+=("tmux")
+        contains_tool "btop" && packages+=("btop")
         contains_tool "zsh" && packages+=("zsh")
         contains_tool "fzf" && packages+=("fzf")
         contains_tool "ripgrep" && packages+=("ripgrep")
         contains_tool "bat" && packages+=("bat")
+        contains_tool "eza" && packages+=("eza")
         contains_tool "zoxide" && packages+=("zoxide")
         contains_tool "neovim" && packages+=("neovim")
         contains_tool "git" && packages+=("git")
@@ -481,7 +482,7 @@ install_packages() {
             install_zsh_plugins_linux
         fi
         
-        # Install btop (may need manual install)
+        # Install btop fallback only if package-manager install did not provide it.
         if contains_tool "btop" && ! command_exists btop; then
             print_info "Installing btop..."
             if command_exists snap; then
@@ -491,15 +492,10 @@ install_packages() {
             fi
         fi
         
-        # Install GitHub CLI
+        # Install GitHub CLI fallback
         if contains_tool "gh" && ! command_exists gh; then
             print_info "Installing GitHub CLI..."
-            if [[ "$DISTRO" == "ubuntu" ]] || [[ "$DISTRO" == "debian" ]]; then
-                curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
-                echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
-                sudo apt update
-                sudo apt install gh -y
-            fi
+            install_gh_linux || print_warning "Could not install GitHub CLI automatically"
         fi
         
         # Install eza (modern ls replacement)
@@ -521,6 +517,10 @@ install_packages() {
                 print_warning "curl not found; skipping Starship install"
             fi
         fi
+
+        if contains_tool "nerd-font"; then
+            install_nerd_font_linux
+        fi
     fi
     
     print_success "Package installation complete"
@@ -540,6 +540,106 @@ install_nerd_font_macos() {
     else
         print_info "Hack Nerd Font already installed"
     fi
+}
+
+install_gh_linux() {
+    if command_exists gh; then
+        return 0
+    fi
+
+    if command_exists apt-get; then
+        if [[ "$DISTRO" == "ubuntu" ]] || [[ "$DISTRO" == "debian" ]]; then
+            curl -fsSL https://cli.github.com/packages/githubcli-archive-keyring.gpg | sudo dd of=/usr/share/keyrings/githubcli-archive-keyring.gpg
+            echo "deb [arch=$(dpkg --print-architecture) signed-by=/usr/share/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" | sudo tee /etc/apt/sources.list.d/github-cli.list > /dev/null
+            sudo apt-get update
+            sudo apt-get install -y gh
+            return $?
+        fi
+    fi
+
+    if command_exists dnf; then
+        sudo dnf install -y 'dnf-command(config-manager)' || true
+        sudo dnf config-manager --add-repo https://cli.github.com/packages/rpm/gh-cli.repo || true
+        sudo dnf install -y gh
+        return $?
+    fi
+
+    if command_exists yum; then
+        sudo tee /etc/yum.repos.d/github-cli.repo > /dev/null <<'EOF'
+[github-cli]
+name=GitHub CLI
+baseurl=https://cli.github.com/packages/rpm
+enabled=1
+gpgcheck=1
+gpgkey=https://cli.github.com/packages/githubcli-archive-keyring.gpg
+EOF
+        sudo yum install -y gh
+        return $?
+    fi
+
+    return 1
+}
+
+install_nerd_font_linux() {
+    local font_name="Hack"
+    local font_dir="$HOME/.local/share/fonts/NerdFonts/$font_name"
+    local zip_url="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${font_name}.zip"
+    local zip_path
+    zip_path="$(mktemp /tmp/nerd-font-XXXXXX.zip)"
+
+    if fc-list 2>/dev/null | grep -qi "Hack Nerd Font"; then
+        print_info "Hack Nerd Font already installed"
+        return 0
+    fi
+
+    if ! command_exists unzip; then
+        if command_exists apt-get; then
+            sudo apt-get install -y unzip
+        elif command_exists dnf; then
+            sudo dnf install -y unzip
+        elif command_exists yum; then
+            sudo yum install -y unzip
+        fi
+    fi
+
+    if ! command_exists unzip; then
+        print_warning "unzip not available; skipping Nerd Font install"
+        rm -f "$zip_path"
+        return 1
+    fi
+
+    print_info "Installing Hack Nerd Font..."
+    if command_exists curl; then
+        curl -fsSL "$zip_url" -o "$zip_path" || {
+            rm -f "$zip_path"
+            print_warning "Could not download Nerd Font archive"
+            return 1
+        }
+    elif command_exists wget; then
+        wget -qO "$zip_path" "$zip_url" || {
+            rm -f "$zip_path"
+            print_warning "Could not download Nerd Font archive"
+            return 1
+        }
+    else
+        rm -f "$zip_path"
+        print_warning "curl/wget not available; skipping Nerd Font install"
+        return 1
+    fi
+
+    mkdir -p "$font_dir"
+    unzip -o "$zip_path" -d "$font_dir" >/dev/null 2>&1 || {
+        rm -f "$zip_path"
+        print_warning "Could not extract Nerd Font archive"
+        return 1
+    }
+    rm -f "$zip_path"
+
+    if command_exists fc-cache; then
+        fc-cache -f "$HOME/.local/share/fonts" >/dev/null 2>&1 || true
+    fi
+
+    print_success "Hack Nerd Font installed"
 }
 
 ###############################################################################
@@ -578,22 +678,11 @@ setup_shell() {
     print_info "Configuring shell..."
 
     if [[ "$OS" == "macos" ]]; then
-        # macOS ships with zsh as the default login shell.
-        if command_exists zsh; then
-            setup_zshrc
-        else
-            setup_bashrc
-        fi
+        # macOS target shell config is always zsh.
+        setup_zshrc
     elif [[ "$OS" == "linux" ]]; then
-        local current_shell="${SHELL##*/}"
-        if [[ "$current_shell" == "zsh" ]] && command_exists zsh; then
-            setup_zshrc
-        else
-            setup_bashrc
-            if command_exists zsh; then
-                print_info "zsh is installed, but active shell is $current_shell; configured bash"
-            fi
-        fi
+        # Linux target shell config is always bash.
+        setup_bashrc
     fi
     
     print_success "Shell configuration complete"
@@ -1113,7 +1202,9 @@ main() {
     print_info "Next steps:"
 
     if contains_tool "shell"; then
-        if command_exists zsh; then
+        if [[ "$OS" == "linux" ]]; then
+            echo "  - Reload shell: source ~/.bashrc"
+        elif [[ "$OS" == "macos" ]]; then
             echo "  - Reload shell: source ~/.zshrc"
         else
             echo "  - Reload shell: source ~/.bashrc"
@@ -1128,7 +1219,7 @@ main() {
     if contains_tool "btop"; then
         echo "  - Open system monitor: btop"
     fi
-    if [[ "$OS" == "macos" ]] && contains_tool "nerd-font"; then
+    if contains_tool "nerd-font"; then
         echo "  - Set terminal font to: Hack Nerd Font"
     fi
 
@@ -1144,7 +1235,9 @@ main() {
     echo ""
     print_info "Configuration files:"
     if contains_tool "shell"; then
-        if command_exists zsh; then
+        if [[ "$OS" == "linux" ]]; then
+            echo "  - ~/.bashrc (shell config)"
+        elif [[ "$OS" == "macos" ]]; then
             echo "  - ~/.zshrc (shell config)"
         else
             echo "  - ~/.bashrc (shell config)"
