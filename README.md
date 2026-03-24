@@ -56,6 +56,18 @@ chmod +x install.sh
 
 ## Reset To Default
 
+One-line remove:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/DeRossoMarco/terminal-setup/main/reset.sh | bash
+```
+
+One-line remove (non-interactive):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/DeRossoMarco/terminal-setup/main/reset.sh | bash -s -- --yes
+```
+
 To remove managed configuration, uninstall related Homebrew packages, and restore the latest backups:
 
 ```bash
