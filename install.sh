@@ -2,7 +2,7 @@
 
 ###############################################################################
 # Terminal Setup Script
-# Installs and configures: starship, tmux, zsh/bash, btop, gh, and more
+# Installs and configures: tmux, zsh, btop, gh, and modern CLI tools
 # Usage: curl -fsSL https://raw.githubusercontent.com/DeRossoMarco/terminal-setup/main/install.sh | bash
 ###############################################################################
 
@@ -105,7 +105,6 @@ install_packages() {
         brew update
         
         local packages=(
-            "starship"      # Prompt
             "tmux"          # Terminal multiplexer
             "btop"          # System monitor
             "gh"            # GitHub CLI
@@ -136,7 +135,7 @@ install_packages() {
             sudo apt-get update
             sudo apt-get install -y \
                 tmux \
-                bash \
+                zsh \
                 fzf \
                 ripgrep \
                 bat \
@@ -151,7 +150,7 @@ install_packages() {
             # RHEL/CentOS/Fedora
             sudo yum install -y \
                 tmux \
-                bash \
+                zsh \
                 fzf \
                 ripgrep \
                 bat \
@@ -164,7 +163,7 @@ install_packages() {
             # Fedora
             sudo dnf install -y \
                 tmux \
-                bash \
+                zsh \
                 fzf \
                 ripgrep \
                 bat \
@@ -174,11 +173,8 @@ install_packages() {
                 wget
         fi
         
-        # Install starship (not in most repos)
-        if ! command_exists starship; then
-            print_info "Installing Starship..."
-            curl -sS https://starship.rs/install.sh | sh -s -- -y
-        fi
+        # Install zsh plugins and autosuggestions
+        install_zsh_plugins_linux
         
         # Install btop (may need manual install)
         if ! command_exists btop; then
@@ -216,20 +212,44 @@ install_packages() {
 }
 
 ###############################################################################
+# Zsh Plugins - Linux
+###############################################################################
+
+install_zsh_plugins_linux() {
+    if ! command_exists zsh; then
+        print_warning "zsh not installed, skipping plugins"
+        return 0
+    fi
+    
+    print_info "Installing zsh plugins..."
+    
+    # Install zsh-autosuggestions
+    if [ ! -d "$HOME/.zsh/zsh-autosuggestions" ]; then
+        git clone https://github.com/zsh-users/zsh-autosuggestions "$HOME/.zsh/zsh-autosuggestions" 2>/dev/null || print_warning "Could not clone zsh-autosuggestions"
+    fi
+    
+    # Install zsh-syntax-highlighting
+    if [ ! -d "$HOME/.zsh/zsh-syntax-highlighting" ]; then
+        git clone https://github.com/zsh-users/zsh-syntax-highlighting "$HOME/.zsh/zsh-syntax-highlighting" 2>/dev/null || print_warning "Could not clone zsh-syntax-highlighting"
+    fi
+    
+    # Install zsh-history-substring-search
+    if [ ! -d "$HOME/.zsh/zsh-history-substring-search" ]; then
+        git clone https://github.com/zsh-users/zsh-history-substring-search "$HOME/.zsh/zsh-history-substring-search" 2>/dev/null || print_warning "Could not clone zsh-history-substring-search"
+    fi
+}
+
+###############################################################################
 # Shell Configuration
 ###############################################################################
 
 setup_shell() {
     print_info "Configuring shell..."
     
-    if [[ "$OS" == "macos" ]]; then
-        # macOS uses zsh by default since Catalina (10.15)
-        print_info "Using macOS default zsh shell"
-        
-        # Setup .zshrc
+    # Always prefer zsh if available
+    if command_exists zsh; then
         setup_zshrc
     elif [[ "$OS" == "linux" ]]; then
-        # Setup .bashrc
         setup_bashrc
     fi
     
@@ -240,13 +260,12 @@ setup_zshrc() {
     local zshrc="$HOME/.zshrc"
     
     print_info "Configuring .zshrc..."
-    Check if already configured
+    # Check if already configured
     if [ -f "$zshrc" ] && grep -q "Terminal Setup Configuration" "$zshrc"; then
         print_info ".zshrc already configured - skipping"
         return 0
     fi
     
-    # 
     # Backup existing .zshrc
     if [ -f "$zshrc" ]; then
         cp "$zshrc" "$zshrc.backup.$(date +%Y%m%d_%H%M%S)"
@@ -258,19 +277,17 @@ setup_zshrc() {
 
 # History settings
 HISTFILE=~/.zsh_history
-HISTSIZE=10000
-SAVEHIST=10000
+HISTSIZE=50000
+SAVHIST=50000
 setopt SHARE_HISTORY
 setopt HIST_IGNORE_DUPS
 setopt HIST_IGNORE_SPACE
+setopt HIST_FIND_NO_DUPS
 
 # Basic options
 setopt AUTO_CD
 setopt CORRECT
 setopt INTERACTIVE_COMMENTS
-
-# Colors
-autoload -U colors && colors
 
 # Completion
 autoload -Uz compinit
@@ -302,42 +319,45 @@ if command -v zoxide &> /dev/null; then
     alias cd='z'
 fi
 
-if command -v fzf &> /dev/null; then
-    source <(fzf --zsh)
-fi
-
-# Starship prompt
-if command -v starship &> /dev/null; then
-    eval "$(starship init zsh)"
-fi
-
-# Zsh plugins (macOS Homebrew)
+# Zsh-autosuggestions
 if [[ "$OSTYPE" == "darwin"* ]]; then
     [ -f /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh ] && source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh
+else
+    [ -f $HOME/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh ] && source $HOME/.zsh/zsh-autosuggestions/zsh-autosuggestions.zsh
+fi
+
+# Zsh-syntax-highlighting (must be sourced after zsh-autosuggestions)
+if [[ "$OSTYPE" == "darwin"* ]]; then
     [ -f /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ] && source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+else
+    [ -f $HOME/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ] && source $HOME/.zsh/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
+fi
+
+# Zsh-history-substring-search (must be sourced after zsh-syntax-highlighting)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    [ -f /opt/homebrew/share/zsh-history-substring-search/zsh-history-substring-search.zsh ] && source /opt/homebrew/share/zsh-history-substring-search/zsh-history-substring-search.zsh
+else
+    [ -f $HOME/.zsh/zsh-history-substring-search/zsh-history-substring-search.zsh ] && source $HOME/.zsh/zsh-history-substring-search/zsh-history-substring-search.zsh
+fi
+
+# Bind keys for history-substring-search
+bindkey '^[[A' history-substring-search-up
+bindkey '^[[B' history-substring-search-down
+
+# Fzf history search (Ctrl+R for fuzzy history)
+if command -v fzf &> /dev/null; then
+    __fzf_history() {
+        local output
+        output=$(fc -lnr -2147483648 | awk '!seen[$0]++' | fzf --no-sort --reverse --query="$LBUFFER")
+        LBUFFER="$output"
+    }
+    zle -N __fzf_history
+    bindkey '^R' __fzf_history
 fi
 
 # Custom functions
 mkcd() {
     mkdir -p "$1" && cd "$1"
-}
-
-# FFmpeg functions
-ffmpeg-compress() {
-    ffmpeg -i "$1" -vn -ar 44100 -ac 1 -b:a 96k "$2"
-}
-
-ffmpeg-concat() {
-    for f in *."$1"; do
-        echo "file '$f'" >> files.txt
-    done
-    ffmpeg -f concat -safe 0 -i files.txt -c copy "$2"
-    rm -f files.txt
-}
-
-# Markdown to PDF
-md2pdf() {
-    pandoc "$1" -s -V geometry:margin=1in -o "${1%.*}.pdf"
 }
 
 # Load local customizations
@@ -362,8 +382,8 @@ setup_bashrc() {
 
 # Terminal Setup Configuration
 # History settings
-HISTSIZE=10000
-HISTFILESIZE=20000
+HISTSIZE=50000
+HISTFILESIZE=100000
 HISTCONTROL=ignoredups:ignorespace
 shopt -s histappend
 
@@ -409,13 +429,9 @@ if command -v zoxide &> /dev/null; then
     alias cd='z'
 fi
 
+# Fzf history search (Ctrl+R for fuzzy history)
 if command -v fzf &> /dev/null; then
     eval "$(fzf --bash)"
-fi
-
-# Starship prompt
-if command -v starship &> /dev/null; then
-    eval "$(starship init bash)"
 fi
 
 # Custom functions
@@ -434,181 +450,36 @@ EOF
 # Tool Configurations
 ###############################################################################
 
-setup_starship() {
-    if [ -f "$CONFIG_DIR/starship.toml" ]; then
-        print_info "Starship config already exists - backing up and updating"
-        cp "$CONFIG_DIR/starship.toml" "$CONFIG_DIR/starship.toml.backup.$(date +%Y%m%d_%H%M%S)"
-    else
-        print_info "Creating Starship configuration..."
-    fi
-    
-    mkdir -p "$CONFIG_DIR"
-    
-    # Try to use repo config file first, fall back to inline if not available
-    if [ -f "$REPO_CONFIG_DIR/starship.toml" ]; then
-        cp "$REPO_CONFIG_DIR/starship.toml" "$CONFIG_DIR/starship.toml"
-        print_success "Installed Starship configuration from repo"
-    else
-        cat > "$CONFIG_DIR/starship.toml" << 'EOF'
-# Starship Configuration
-
-format = """
-$directory$git_branch$git_status
-$character """
-
-[character]
-success_symbol = "[➜](bold green)"
-error_symbol = "[➜](bold red)"
-
-[directory]
-style = "bold cyan"
-truncation_length = 3
-truncate_to_repo = true
-format = "[$path]($style)[$read_only]($read_only_style) "
-
-[git_branch]
-symbol = " "
-style = "bold purple"
-format = "on [$symbol$branch]($style) "
-
-[git_status]
-style = "bold yellow"
-format = "([$all_status$ahead_behind]($style) )"
-conflicted = "🏳"
-ahead = "⇡${count}"
-behind = "⇣${count}"
-diverged = "⇕⇡${ahead_count}⇣${behind_count}"
-up_to_date = "✓"
-untracked = "?"
-stashed = "$"
-modified = "!"
-staged = "+"
-renamed = "»"
-deleted = "✘"
-
-[nodejs]
-symbol = " "
-format = "via [$symbol($version )]($style)"
-
-[python]
-symbol = " "
-format = 'via [${symbol}${pyenv_prefix}(${version} )(\($virtualenv\) )]($style)'
-
-[rust]
-symbol = " "
-format = "via [$symbol($version )]($style)"
-
-[golang]
-symbol = " "
-format = "via [$symbol($version )]($style)"
-
-[docker_context]
-symbol = " "
-format = "via [$symbol$context]($style) "
-
-[time]
-disabled = false
-format = "🕙[$time]($style) "
-time_format = "%T"
-style = "bold white"
-
-[cmd_duration]
-min_time = 500
-format = "took [$duration](bold yellow) "
-EOF
-
-    print_success "Created Starship configuration"
-    fi
-}
-
 setup_tmux() {
     print_info "Setting up tmux configuration..."
     
     # Create directories
     mkdir -p "$HOME/.config/tmux"
     
-    # Check if config already exists
-    if [ -f "$HOME/.config/tmux/tmux.conf" ]; then
-        print_info "Tmux config already exists - skipping"
-        return 0
+    # Try to use repo config files first
+    if [ -f "$REPO_CONFIG_DIR/tmux.conf" ]; then
+        cp "$REPO_CONFIG_DIR/tmux.conf" "$HOME/.config/tmux/tmux.conf"
+        print_success "Installed tmux.conf from repo (Oh my tmux!)"
+    else
+        print_warning "tmux.conf not found in repo"
+        return 1
     fi
     
-    # Create tmux config
-    cat > "$HOME/.config/tmux/tmux.conf" << 'EOF'
-# Tmux Configuration
-
-# Prefix
-set -g prefix C-a
-unbind C-b
-bind C-a send-prefix
-
-# Mouse
-set -g mouse on
-
-# Indexing
-set -g base-index 1
-setw -g pane-base-index 1
-set -g renumber-windows on
-
-# Colors
-set -g default-terminal "screen-256color"
-
-# History
-set -g history-limit 50000
-
-# Status bar
-set -g status-style 'bg=#1e1e2e fg=#cdd6f4'
-set -g status-left '#[bg=#89b4fa,fg=#1e1e2e,bold] #S '
-set -g status-right '#[bg=#89b4fa,fg=#1e1e2e,bold] %Y-%m-%d %H:%M '
-
-# Split panes
-bind | split-window -h -c "#{pane_current_path}"
-bind - split-window -v -c "#{pane_current_path}"
-
-# Reload config
-bind r source-file ~/.config/tmux/tmux.conf \; display "Reloaded!"
-
-# Vi mode
-set-window-option -g mode-keys vi
-
-# Load local config
-if-shell "[ -f ~/.config/tmux/tmux.conf.local ]" "source ~/.config/tmux/tmux.conf.local"
-EOF
+    # Copy .local customizations if they exist
+    if [ -f "$REPO_CONFIG_DIR/tmux.conf.local" ]; then
+        cp "$REPO_CONFIG_DIR/tmux.conf.local" "$HOME/.config/tmux/tmux.conf.local"
+        print_success "Installed tmux.conf.local customizations"
+    fi
     
-    print_success "Created tmux configuration at ~/.config/tmux/tmux.conf"
-    print_info "You can customize it by editing ~/.config/tmux/tmux.conf.local"
+    print_info "Tmux configuration: Oh my tmux!"
+    print_info "Edit ~/.config/tmux/tmux.conf.local for further customizations"
 }
 
 setup_btop() {
-    print_info "Configuring btop..."
-    
+    print_info "Setting up btop..."
     mkdir -p "$CONFIG_DIR/btop"
-    
-    cat > "$CONFIG_DIR/btop/btop.conf" << 'EOF'
-# Btop Configuration
-
-# Color theme
-color_theme = "Default"
-
-# Update time in milliseconds
-update_ms = 2000
-
-# Show disks
-show_disks = True
-
-# Show network
-net_download = 100
-net_upload = 100
-
-# CPU graph
-cpu_graph_upper = "total"
-cpu_graph_lower = "total"
-
-# Show temperature
-show_cpu_freq = True
-EOF
-
-    print_success "Created btop configuration"
+    print_info "btop will use default configuration on first run"
+    print_info "Customize it later in ~/.config/btop/btop.conf"
 }
 
 setup_git() {
@@ -715,7 +586,6 @@ main() {
     echo ""
     
     # Setup tools
-    setup_starship
     setup_tmux
     setup_btop
     setup_git
@@ -724,17 +594,20 @@ main() {
     print_success "Installation complete! 🎉"
     echo ""
     print_info "Next steps:"
-    echo "  1. Restart your terminal or run: source ~/.zshrc (macOS) or source ~/.bashrc (Linux)"
-    echo "  2. For GitHub CLI, run: gh auth login"
-    echo "  3. Start tmux with: tmux"
-    echo "  4. Open btop with: btop"
+    echo "  1. Reload shell: source ~/.zshrc"
+    echo "  2. Login to GitHub: gh auth login"
+    echo "  3. Start tmux: tmux"
+    echo "  4. Open system monitor: btop"
+    echo ""
+    print_info "Key bindings:"
+    echo "  - Ctrl+R: Fuzzy search history"
+    echo "  - Up/Down arrows: Search history (substring match)"
+    echo "  - Ctrl+A: tmux prefix"
     echo ""
     print_info "Configuration files:"
-    echo "  - ~/.zshrc or ~/.bashrc"
-    echo "  - ~/.config/starship.toml"
-    echo "  - ~/.config/tmux/tmux.conf"
-    echo "  - ~/.config/tmux/tmux.conf.local (for customizations)"
-    echo "  - ~/.config/btop/btop.conf"
+    echo "  - ~/.zshrc (shell config)"
+    echo "  - ~/.config/tmux/tmux.conf (tmux config)"
+    echo "  - ~/.config/tmux/tmux.conf.local (tmux customizations)"
     echo ""
     print_info "Happy coding! ✨"
 }
