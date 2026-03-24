@@ -74,6 +74,25 @@ clean_bashrc_managed_block_if_needed() {
     print_success "Removed managed block from $bashrc"
 }
 
+remove_starship_init_lines() {
+    local file="$1"
+
+    if [[ ! -f "$file" ]]; then
+        return 0
+    fi
+
+    cp "$file" "$file.reset.backup.$(date +%Y%m%d_%H%M%S)"
+
+    # Remove both managed block and one-line legacy init entries if present.
+    sed -i.bak \
+        -e '/if command -v starship .*; then/,/^[[:space:]]*fi$/d' \
+        -e '/^eval "$(starship init zsh)"$/d' \
+        -e '/^eval "$(starship init bash)"$/d' \
+        "$file"
+
+    rm -f "$file.bak"
+}
+
 sanitize_zshrc_optional_tools() {
     local zshrc="$HOME/.zshrc"
 
@@ -92,6 +111,14 @@ sanitize_zshrc_optional_tools() {
         "$zshrc"
 
     rm -f "$zshrc.bak"
+}
+
+remove_starship_config() {
+    local starship_config="$HOME/.config/starship.toml"
+
+    if ! restore_latest_backup "$starship_config"; then
+        remove_file_if_exists "$starship_config"
+    fi
 }
 
 remove_setup_configs() {
@@ -149,6 +176,7 @@ uninstall_brew_packages() {
     local formulas=(
         "tmux"
         "btop"
+        "starship"
         "gh"
         "fzf"
         "ripgrep"
@@ -203,6 +231,9 @@ restore_shell_configs() {
     if ! restore_latest_backup "$HOME/.bashrc"; then
         clean_bashrc_managed_block_if_needed
     fi
+
+    remove_starship_init_lines "$HOME/.zshrc"
+    remove_starship_init_lines "$HOME/.bashrc"
 }
 
 confirm_reset() {
@@ -230,6 +261,7 @@ main() {
     uninstall_brew_packages
     restore_shell_configs
     sanitize_zshrc_optional_tools
+    remove_starship_config
     remove_setup_configs
 
     echo ""

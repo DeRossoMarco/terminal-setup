@@ -8,6 +8,7 @@ One-command installation and configuration for a modern terminal setup on macOS 
 
 - tmux - terminal multiplexer
 - btop - system monitor
+- starship - modern prompt
 - GitHub CLI (gh)
 - fzf - fuzzy finder
 - ripgrep - fast grep
@@ -202,9 +203,16 @@ export TERMINAL_SETUP_DISABLE_ICONS=1
 
 ### zsh shows: command not found: starship
 
-This setup does not use Starship by default.
+This setup configures Starship by default.
 
-Remove old Starship init lines from your personal shell files if present:
+If Starship is still missing after install, install it manually and reload your shell:
+
+```bash
+brew install starship
+source ~/.zshrc
+```
+
+If you have custom shell files, ensure one Starship init block is present:
 
 - ~/.zshrc
 - ~/.zshrc.local

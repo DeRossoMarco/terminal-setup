@@ -1,65 +1,126 @@
-# Starship Configuration (Minimal)
-# This file is used by install.sh
-# Copy to ~/.config/starship.toml or let the install script handle it
-# For more options see: https://starship.rs/config/
+# Starship Configuration (Neon Capsules)
+# Requires a Nerd Font for best rendering.
 
-format = """
+add_newline = true
+command_timeout = 2000
+palette = "neon_night"
+
+format = """\
+[](fg:sky)\
 $directory\
+${custom.directory_separator_not_git}\
+${custom.directory_separator_git}\
 $git_branch\
 $git_status\
+$git_metrics\
+$git_state\
+${custom.git_block_end}\
+$line_break\
+$character"""
+
+right_format = """\
+$cmd_duration\
 $nodejs\
 $python\
 $rust\
 $golang\
 $docker_context\
-$line_break\
-$character"""
+$time"""
+
+[line_break]
+disabled = false
 
 [character]
-success_symbol = "[❯](bold green)"
-error_symbol = "[❯](bold red)"
-vicmd_symbol = "[❮](bold green)"
+success_symbol = "[❯](bold fg:green)"
+error_symbol = "[❯](bold fg:red)"
+vicmd_symbol = "[❮](bold fg:lavender)"
 
 [directory]
-style = "bold cyan"
 truncation_length = 3
 truncate_to_repo = true
-format = "[$path]($style)[$read_only]($read_only_style) "
+style = "fg:text_hi bg:sky"
+format = "[  $path ]($style)"
+read_only = " "
+read_only_style = "fg:text_hi bg:sky"
 
 [git_branch]
-symbol = " "
-style = "bold purple"
-format = "[$symbol$branch]($style) "
+symbol = " "
+style = "fg:text_hi bg:peach"
+format = "[ $symbol$branch ]($style)"
 
 [git_status]
-style = "bold yellow"
-format = "([$all_status$ahead_behind]($style))"
+style = "fg:text_hi bg:peach"
+format = "[($all_status$ahead_behind )]($style)"
 
-[nodejs]
-symbol = " "
-style = "bold green"
-format = "[$symbol($version )]($style)"
+[git_metrics]
+disabled = false
+format = "[+$added]($added_style)[-$deleted ]($deleted_style)"
+added_style = "bold fg:#22c55e bg:peach"
+deleted_style = "bold fg:#ef4444 bg:peach"
 
-[python]
-symbol = " "
-style = "bold blue"
-format = '[${symbol}${pyenv_prefix}(${version} )(\($virtualenv\) )]($style)'
-
-[rust]
-symbol = " "
-style = "bold red"
-format = "[$symbol($version )]($style)"
-
-[golang]
-symbol = " "
-style = "bold cyan"
-format = "[$symbol($version )]($style)"
-
-[docker_context]
-symbol = " "
-style = "bold blue"
-format = "[$symbol$context]($style) "
+[git_state]
+style = "fg:text_hi bg:peach"
+format = "[($state( $progress_current/$progress_total) )]($style)"
 
 [cmd_duration]
-min_time = 500
-format = "took [$duration](bold yellow)"
+min_time = 1500
+format = "[](fg:surface2)[  $duration ](fg:text_hi bg:surface2)[ ](fg:surface2)"
+
+[nodejs]
+symbol = " "
+format = "[](fg:green)[ $symbol($version) ](fg:text_hi bg:green)[ ](fg:green)"
+
+[python]
+symbol = " "
+format = '[](fg:blue)[ $symbol${pyenv_prefix}(${version})( \($virtualenv\)) ](fg:text_hi bg:blue)[ ](fg:blue)'
+
+[rust]
+symbol = " "
+format = "[](fg:orange)[ $symbol($version) ](fg:text_hi bg:orange)[ ](fg:orange)"
+
+[golang]
+symbol = " "
+format = "[](fg:cyan)[ $symbol($version) ](fg:text_hi bg:cyan)[ ](fg:cyan)"
+
+[docker_context]
+symbol = " "
+format = "[](fg:iris)[ $symbol$context ](fg:text_hi bg:iris)[ ](fg:iris)"
+
+[time]
+disabled = false
+time_format = "%H:%M"
+format = "[](fg:lavender)[  $time ](fg:text_hi bg:lavender)[](fg:lavender)"
+
+[custom.directory_separator_git]
+description = "Separator after directory when inside a git repository"
+command = ""
+format = "[](fg:sky bg:peach)"
+when = "git rev-parse --is-inside-work-tree >/dev/null 2>&1"
+
+[custom.directory_separator_not_git]
+description = "Rounded end after directory when outside git"
+command = ""
+format = "[](fg:sky)"
+when = "! git rev-parse --is-inside-work-tree >/dev/null 2>&1"
+
+[custom.git_block_end]
+description = "Rounded end after git block when inside git"
+command = ""
+format = "[](fg:peach)"
+when = "git rev-parse --is-inside-work-tree >/dev/null 2>&1"
+
+[palettes.neon_night]
+text = "#cfd6e6"
+text_hi = "#f8fbff"
+crust = "#0f1220"
+surface2 = "#35415f"
+sky = "#2f6dbe"
+peach = "#9a5a2b"
+lavender = "#5f5bd6"
+iris = "#6f3fb6"
+blue = "#2d5bb6"
+cyan = "#1f7f73"
+green = "#2e8b57"
+mint = "#2fa38a"
+orange = "#ad6a2f"
+red = "#b64668"

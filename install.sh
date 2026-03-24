@@ -107,6 +107,7 @@ install_packages() {
         local packages=(
             "tmux"          # Terminal multiplexer
             "btop"          # System monitor
+            "starship"      # Modern prompt
             "gh"            # GitHub CLI
             "fzf"           # Fuzzy finder
             "ripgrep"       # Better grep
@@ -209,6 +210,16 @@ install_packages() {
                 print_warning "eza requires Rust. Install with: curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh"
             fi
         fi
+
+        # Install Starship prompt
+        if ! command_exists starship; then
+            print_info "Installing Starship..."
+            if command_exists curl; then
+                curl -sS https://starship.rs/install.sh | sh -s -- -y
+            else
+                print_warning "curl not found; skipping Starship install"
+            fi
+        fi
     fi
     
     print_success "Package installation complete"
@@ -275,12 +286,34 @@ setup_shell() {
     print_success "Shell configuration complete"
 }
 
+ensure_starship_init_in_file() {
+    local shell_file="$1"
+    local shell_name="$2"
+
+    [ -f "$shell_file" ] || return 0
+
+    if grep -q 'starship init' "$shell_file"; then
+        return 0
+    fi
+
+    cat >> "$shell_file" << EOF
+
+# Starship prompt
+if command -v starship &> /dev/null; then
+    eval "\$(starship init $shell_name)"
+fi
+EOF
+
+    print_info "Added Starship init block to $shell_file"
+}
+
 setup_zshrc() {
     local zshrc="$HOME/.zshrc"
     
     print_info "Configuring .zshrc..."
     # Check if already configured
     if [ -f "$zshrc" ] && grep -q "Terminal Setup Configuration" "$zshrc"; then
+        ensure_starship_init_in_file "$zshrc" "zsh"
         print_info ".zshrc already configured - skipping"
         return 0
     fi
@@ -391,6 +424,11 @@ mkcd() {
     mkdir -p "$1" && cd "$1"
 }
 
+# Starship prompt
+if command -v starship &> /dev/null; then
+    eval "$(starship init zsh)"
+fi
+
 # Load local customizations
 [ -f ~/.zshrc.local ] && source ~/.zshrc.local
 EOF
@@ -402,6 +440,13 @@ setup_bashrc() {
     local bashrc="$HOME/.bashrc"
     
     print_info "Configuring .bashrc..."
+
+    # If managed block already exists, only ensure Starship init is present.
+    if [ -f "$bashrc" ] && grep -q "Terminal Setup Configuration" "$bashrc"; then
+        ensure_starship_init_in_file "$bashrc" "bash"
+        print_info ".bashrc already configured - skipping"
+        return 0
+    fi
     
     # Backup existing .bashrc
     if [ -f "$bashrc" ]; then
@@ -473,6 +518,11 @@ mkcd() {
     mkdir -p "$1" && cd "$1"
 }
 
+# Starship prompt
+if command -v starship &> /dev/null; then
+    eval "$(starship init bash)"
+fi
+
 # Load local customizations
 [ -f ~/.bashrc.local ] && source ~/.bashrc.local
 EOF
@@ -529,6 +579,25 @@ setup_btop() {
     mkdir -p "$CONFIG_DIR/btop"
     print_info "btop will use default configuration on first run"
     print_info "Customize it later in ~/.config/btop/btop.conf"
+}
+
+setup_starship() {
+    local starship_config="$CONFIG_DIR/starship.toml"
+
+    print_info "Setting up Starship configuration..."
+    mkdir -p "$CONFIG_DIR"
+
+    if [ -f "$starship_config" ]; then
+        cp "$starship_config" "$starship_config.backup.$(date +%Y%m%d_%H%M%S)"
+        print_info "Backed up existing ~/.config/starship.toml"
+    fi
+
+    if [ -f "$REPO_CONFIG_DIR/starship.toml" ]; then
+        cp "$REPO_CONFIG_DIR/starship.toml" "$starship_config"
+        print_success "Installed Starship config from repo"
+    else
+        print_warning "starship.toml not found in repo config directory"
+    fi
 }
 
 setup_git() {
@@ -637,6 +706,7 @@ main() {
     # Setup tools
     setup_tmux
     setup_btop
+    setup_starship
     setup_git
     echo ""
     
@@ -658,6 +728,7 @@ main() {
     echo ""
     print_info "Configuration files:"
     echo "  - ~/.zshrc (shell config)"
+    echo "  - ~/.config/starship.toml (starship prompt)"
     echo "  - ~/.config/tmux/tmux.conf (tmux config)"
     echo "  - ~/.config/tmux/tmux.conf.local (tmux customizations)"
     echo ""
