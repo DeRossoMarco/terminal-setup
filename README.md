@@ -34,7 +34,7 @@ One-command installation and configuration for a modern terminal setup on macOS 
 - apt/yum/dnf support on Linux
 - History-based suggestions and search in zsh
 - Fuzzy history search on Ctrl+R
-- Oh My Tmux-based config files from this repository
+- Native tmux config files from this repository
 - Safe icon fallback for terminals without Nerd Fonts
 - Existing shell config backup before overwrite
 
@@ -94,7 +94,6 @@ Notes:
 
 - ~/.zshrc or ~/.bashrc
 - ~/.config/tmux/tmux.conf
-- ~/.config/tmux/tmux.conf.local
 - ~/.config/btop/ (directory only, btop uses defaults until first run)
 
 Existing shell files are backed up as timestamped files before changes.
@@ -128,17 +127,13 @@ unset TERMINAL_SETUP_DISABLE_ICONS
 
 ## Tmux
 
-This repository ships an Oh My Tmux-based configuration in:
+This repository ships a native tmux configuration in:
 
 - configs/tmux.conf
-- configs/tmux.conf.local
 
 The installer copies them to:
 
 - ~/.config/tmux/tmux.conf
-- ~/.config/tmux/tmux.conf.local
-
-Use ~/.config/tmux/tmux.conf.local for personal tweaks and keep the main file managed by the repo.
 
 ## Zsh History Search
 

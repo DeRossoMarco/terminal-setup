@@ -543,35 +543,21 @@ setup_tmux() {
     # Try to use repo config files first
     if [ -f "$REPO_CONFIG_DIR/tmux.conf" ]; then
         cp "$REPO_CONFIG_DIR/tmux.conf" "$HOME/.config/tmux/tmux.conf"
-        print_success "Installed tmux.conf from repo (Oh my tmux!)"
+        print_success "Installed tmux.conf from repo"
     else
         print_warning "tmux.conf not found in repo"
         return 1
     fi
     
-    # Copy .local customizations if they exist
-    if [ -f "$REPO_CONFIG_DIR/tmux.conf.local" ]; then
-        cp "$REPO_CONFIG_DIR/tmux.conf.local" "$HOME/.config/tmux/tmux.conf.local"
-        print_success "Installed tmux.conf.local customizations"
-    fi
-
     # Ensure tmux loads this config by default
     if [ -e "$HOME/.tmux.conf" ] && [ ! -L "$HOME/.tmux.conf" ]; then
         mv "$HOME/.tmux.conf" "$HOME/.tmux.conf.backup.$(date +%Y%m%d_%H%M%S)"
         print_info "Backed up existing ~/.tmux.conf"
     fi
     ln -sfn "$HOME/.config/tmux/tmux.conf" "$HOME/.tmux.conf"
-
-    if [ -f "$HOME/.config/tmux/tmux.conf.local" ]; then
-        if [ -e "$HOME/.tmux.conf.local" ] && [ ! -L "$HOME/.tmux.conf.local" ]; then
-            mv "$HOME/.tmux.conf.local" "$HOME/.tmux.conf.local.backup.$(date +%Y%m%d_%H%M%S)"
-            print_info "Backed up existing ~/.tmux.conf.local"
-        fi
-        ln -sfn "$HOME/.config/tmux/tmux.conf.local" "$HOME/.tmux.conf.local"
-    fi
     
-    print_info "Tmux configuration: Oh my tmux!"
-    print_info "Edit ~/.config/tmux/tmux.conf.local for further customizations"
+    print_info "Tmux configuration installed"
+    print_info "Edit ~/.config/tmux/tmux.conf for further customizations"
 }
 
 setup_btop() {
@@ -730,7 +716,6 @@ main() {
     echo "  - ~/.zshrc (shell config)"
     echo "  - ~/.config/starship.toml (starship prompt)"
     echo "  - ~/.config/tmux/tmux.conf (tmux config)"
-    echo "  - ~/.config/tmux/tmux.conf.local (tmux customizations)"
     echo ""
     print_info "Happy coding! ✨"
 }
