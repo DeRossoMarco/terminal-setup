@@ -295,11 +295,30 @@ compinit
 zstyle ':completion:*' menu select
 zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
 
+# Icon fallback: set TERMINAL_SETUP_DISABLE_ICONS=1 to force plain output
+TERMINAL_SETUP_DISABLE_ICONS="${TERMINAL_SETUP_DISABLE_ICONS:-0}"
+
+# Clear screen + scrollback
+cl() {
+    clear
+    printf '\033[3J'
+}
+
 # Aliases
-alias cl='clear'
-alias ll='eza -lah --icons --git'
-alias ls='eza --icons'
-alias la='eza -a --icons'
+if command -v eza &> /dev/null; then
+    if [[ "$TERMINAL_SETUP_DISABLE_ICONS" == "1" ]] || [[ "${LC_CTYPE:-${LANG:-}}" != *"UTF-8"* ]]; then
+        alias ll='eza -lah --git'
+        alias ls='eza'
+        alias la='eza -a'
+    else
+        alias ll='eza -lah --icons --git'
+        alias ls='eza --icons'
+        alias la='eza -a --icons'
+    fi
+else
+    alias ll='ls -lah'
+    alias la='ls -A'
+fi
 alias cat='bat --style=plain'
 alias top='btop'
 alias vim='nvim'
@@ -392,11 +411,26 @@ shopt -s cdspell
 shopt -s dirspell
 shopt -s autocd 2>/dev/null
 
+# Clear screen + scrollback
+cl() {
+    clear
+    printf '\033[3J'
+}
+
+# Icon fallback: set TERMINAL_SETUP_DISABLE_ICONS=1 to force plain output
+TERMINAL_SETUP_DISABLE_ICONS="${TERMINAL_SETUP_DISABLE_ICONS:-0}"
+
 # Aliases
 if command -v eza &> /dev/null; then
-    alias ll='eza -lah --icons --git'
-    alias ls='eza --icons'
-    alias la='eza -a --icons'
+    if [[ "$TERMINAL_SETUP_DISABLE_ICONS" == "1" ]] || [[ "${LC_CTYPE:-${LANG:-}}" != *"UTF-8"* ]]; then
+        alias ll='eza -lah --git'
+        alias ls='eza'
+        alias la='eza -a'
+    else
+        alias ll='eza -lah --icons --git'
+        alias ls='eza --icons'
+        alias la='eza -a --icons'
+    fi
 else
     alias ll='ls -lah'
     alias la='ls -A'

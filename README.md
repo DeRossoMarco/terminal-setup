@@ -1,250 +1,208 @@
-# 🚀 Terminal Setup Script
+# Terminal Setup Script
 
-One-command installation and configuration for a modern, beautiful terminal setup.
+One-command installation and configuration for a modern terminal setup on macOS and Linux.
 
-## ✨ What's Included
+## What Is Included
 
 ### Tools Installed
 
-- **[Starship](https://starship.rs/)** - Fast, customizable prompt
-- **[tmux](https://github.com/tmux/tmux)** - Terminal multiplexer
-- **[btop](https://github.com/aristocratos/btop)** - Beautiful system monitor
-- **[GitHub CLI](https://cli.github.com/)** - GitHub command-line tool
-- **[fzf](https://github.com/junegunn/fzf)** - Fuzzy finder
-- **[ripgrep](https://github.com/BurntSushi/ripgrep)** - Fast grep alternative
-- **[bat](https://github.com/sharkdp/bat)** - Better cat with syntax highlighting
-- **[eza](https://github.com/eza-community/eza)** - Modern ls replacement
-- **[zoxide](https://github.com/ajmeek/zoxide)** - Smarter cd command
-- **[Neovim](https://neovim.io/)** - Hyperextensible text editor
+- tmux - terminal multiplexer
+- btop - system monitor
+- GitHub CLI (gh)
+- fzf - fuzzy finder
+- ripgrep - fast grep
+- bat - better cat
+- eza - modern ls replacement
+- zoxide - smarter cd
+- neovim
+- git
+- zsh plugins:
+  - zsh-autosuggestions
+  - zsh-syntax-highlighting
+  - zsh-history-substring-search
 
-### Shell Configuration
+### Shell Setup
 
-- **macOS**: Configures `zsh` with modern aliases and functions
-- **Linux**: Configures `bash` with modern aliases and functions
+- macOS: configures zsh
+- Linux: prefers zsh if available, falls back to bash
 
 ### Features
 
-✅ OS-aware installation (macOS & Linux)  
-✅ Automatic package manager setup (Homebrew/apt/yum)  
-✅ Beautiful, informative prompt with Starship  
-✅ Pre-configured tmux with sane defaults  
-✅ Modern command aliases (`ll`, `cat`, `top`, etc.)  
-✅ Git integration and shortcuts  
-✅ Fuzzy finding and smart navigation  
-✅ All config files backed up before modification  
+- OS-aware setup for macOS and Linux
+- Homebrew bootstrap on macOS
+- apt/yum/dnf support on Linux
+- History-based suggestions and search in zsh
+- Fuzzy history search on Ctrl+R
+- Oh My Tmux-based config files from this repository
+- Safe icon fallback for terminals without Nerd Fonts
+- Existing shell config backup before overwrite
 
-## 🎯 Quick Install
+## Quick Install
 
-### One-Line Install (when hosted on GitHub)
+### One-line install
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/DeRossoMarco/terminal-setup/main/install.sh | bash
 ```
 
-### Manual Install
+### Manual install
 
 ```bash
-# Clone the repository
 git clone https://github.com/DeRossoMarco/terminal-setup.git
 cd terminal-setup
-
-# Make executable and run
 chmod +x install.sh
 ./install.sh
 ```
 
-## 📦 What Gets Configured
+## What Gets Configured
 
-### Shell Configuration Files
+### Files
 
-The script creates/updates:
+- ~/.zshrc or ~/.bashrc
+- ~/.config/tmux/tmux.conf
+- ~/.config/tmux/tmux.conf.local
+- ~/.config/btop/ (directory only, btop uses defaults until first run)
 
-- `~/.zshrc` (macOS) or `~/.bashrc` (Linux)
-- `~/.config/starship.toml`
-- `~/.config/tmux/` (Oh My Tmux! installation)
-- `~/.config/btop/btop.conf`
+Existing shell files are backed up as timestamped files before changes.
 
-**Note**: Existing configuration files are automatically backed up with a timestamp.
+## Aliases And Behavior
 
-### New Aliases
+### Main aliases
 
-After installation, you'll have access to:
+- ll, ls, la via eza
+- cat via bat
+- top via btop
+- vim and vi via nvim
+- gs, ga, gc, gp, gl, gd for git shortcuts
+- cd mapped to zoxide when available
 
-```bash
-# Modern file operations
-ll         # Better ls with icons and git info
-ls         # eza with icons
-la         # List all files with icons
-cat        # bat with syntax highlighting
-top        # btop system monitor
+### Icon fallback
 
-# Editor
-vim, vi    # Aliased to neovim
+If your terminal cannot render icon glyphs, icons are disabled automatically when locale is not UTF-8.
 
-# Git shortcuts
-gs         # git status
-ga         # git add
-gc         # git commit
-gp         # git push
-gl         # git log (pretty graph)
-gd         # git diff
-
-# Smart navigation
-cd         # zoxide (learns your habits)
-z          # Jump to frequent directories
-```
-
-### New Functions
+You can force plain mode anytime:
 
 ```bash
-mkcd <dir>  # Create directory and cd into it
+export TERMINAL_SETUP_DISABLE_ICONS=1
 ```
 
-## 🎨 Customization
-
-### Local Customizations
-
-Add your personal customizations to:
-
-- `~/.zshrc.local` (macOS)
-- `~/.bashrc.local` (Linux)
-
-These files are sourced automatically and won't be overwritten by the script.
-
-### Starship Prompt
-
-Edit `~/.config/starship.toml` to customize your prompt.
-
-See [Starship documentation](https://starship.rs/config/) for all options.
-
-### Tmux
-
-The script installs **[Oh My Tmux!](https://github.com/gpakosz/.tmux)** - a beautiful, feature-rich tmux configuration.
-
-**Installation structure:**
-- Main config: `~/.local/share/tmux/oh-my-tmux/.tmux.conf` (managed by Oh My Tmux)
-- Symlink: `~/.config/tmux/tmux.conf` → main config
-- **Your customizations**: `~/.config/tmux/tmux.conf.local` ← Edit this file!
-
-**If you already have Oh My Tmux:**
-- The script will detect and skip installation
-- Your customizations in `~/.config/tmux/tmux.conf.local` are preserved
-
-**Key bindings (Oh My Tmux defaults):**
-- Prefix: `Ctrl-a` (instead of default `Ctrl-b`)
-- Split horizontal: `Ctrl-a -`
-- Split vertical: `Ctrl-a |`
-- Reload config: `Ctrl-a r`
-- Create session: `Ctrl-a C-c`
-- Find session: `Ctrl-a C-f`
-
-**For more info:**
-- See [Oh My Tmux documentation](https://github.com/gpakosz/.tmux)
-- Edit `~/.config/tmux/tmux.conf.local` for your customizations
-- Don't edit the main `.tmux.conf` (it gets overwritten on updates)
-
-## 🖥️ OS Support
-
-### macOS
-
-- Uses **Homebrew** as package manager
-- Configures **zsh** as default shell
-- Installs all packages via `brew`
-
-### Linux
-
-Supported distributions:
-
-- **Debian/Ubuntu** (apt)
-- **RHEL/CentOS** (yum)
-- **Fedora** (dnf)
-
-Configures **bash** as default shell.
-
-## 📝 Manual Steps
-
-After installation:
-
-1. **Restart your terminal** or reload your shell config:
-   ```bash
-   # macOS
-   source ~/.zshrc
-   
-   # Linux
-   source ~/.bashrc
-   ```
-
-2. **Authenticate GitHub CLI** (optional):
-   ```bash
-   gh auth login
-   ```
-
-3. **Start using tmux**:
-   ```bash
-   tmux
-   ```
-
-4. **Try btop**:
-   ```bash
-   btop
-   ```
-
-## 🔧 Troubleshooting
-
-### Permission Denied
-
-If you get permission errors, ensure the script is executable:
+To re-enable icons:
 
 ```bash
-chmod +x install.sh
-./install.sh
+unset TERMINAL_SETUP_DISABLE_ICONS
 ```
 
-### Homebrew Not Found (macOS)
+## Tmux
 
-If Homebrew installation fails, install it manually:
+This repository ships an Oh My Tmux-based configuration in:
+
+- configs/tmux.conf
+- configs/tmux.conf.local
+
+The installer copies them to:
+
+- ~/.config/tmux/tmux.conf
+- ~/.config/tmux/tmux.conf.local
+
+Use ~/.config/tmux/tmux.conf.local for personal tweaks and keep the main file managed by the repo.
+
+## Zsh History Search
+
+With zsh configuration enabled:
+
+- Up/Down arrows: history substring search
+- Ctrl+R: fuzzy history search with fzf
+- Autosuggestions from command history
+- Syntax highlighting while typing
+
+## Linux Notes
+
+Linux setup supports apt, yum, and dnf.
+
+For zsh plugins on Linux, repositories are cloned under:
+
+- ~/.zsh/zsh-autosuggestions
+- ~/.zsh/zsh-syntax-highlighting
+- ~/.zsh/zsh-history-substring-search
+
+## Post-install Steps
+
+1. Reload shell config:
+
+```bash
+source ~/.zshrc
+```
+
+If using bash on Linux:
+
+```bash
+source ~/.bashrc
+```
+
+2. Authenticate GitHub CLI:
+
+```bash
+gh auth login
+```
+
+3. Start tmux:
+
+```bash
+tmux
+```
+
+4. Open btop:
+
+```bash
+btop
+```
+
+## Troubleshooting
+
+### Icons look broken in ls output
+
+Install a Nerd Font and select it in your terminal profile, or force plain mode:
+
+```bash
+export TERMINAL_SETUP_DISABLE_ICONS=1
+```
+
+### zsh shows: command not found: starship
+
+This setup does not use Starship by default.
+
+Remove old Starship init lines from your personal shell files if present:
+
+- ~/.zshrc
+- ~/.zshrc.local
+- ~/.bashrc
+- ~/.bashrc.local
+
+Look for lines similar to:
+
+```bash
+eval "$(starship init zsh)"
+```
+
+or:
+
+```bash
+eval "$(starship init bash)"
+```
+
+### Homebrew not found on macOS
+
+Install Homebrew manually and rerun the script:
 
 ```bash
 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
 ```
 
-### Package Not Available (Linux)
+## Contributing
 
-Some packages may not be available in all distributions. The script will skip unavailable packages and continue.
+Contributions are welcome for:
 
-### Prompt Not Showing
-
-If the Starship prompt doesn't appear after installation:
-
-```bash
-# Check if starship is installed
-which starship
-
-# Manually initialize
-echo 'eval "$(starship init zsh)"' >> ~/.zshrc  # macOS
-echo 'eval "$(starship init bash)"' >> ~/.bashrc  # Linux
-
-# Reload shell
-exec $SHELL
-```
-
-## 🤝 Contributing
-
-Contributions welcome! Feel free to:
-
-- Add support for more Linux distributions
-- Include additional useful tools
-- Improve configuration defaults
-- Fix bugs or add features
-
-## ⭐ Credits
-
-This setup script configures amazing open-source tools. Give them a star!
-
-- [Starship](https://github.com/starship/starship)
-- [tmux](https://github.com/tmux/tmux)
-- [btop](https://github.com/aristocratos/btop)
-- [fzf](https://github.com/junegunn/fzf)
-- And many more...
-
----
+- additional distro support
+- safer package detection
+- shell improvements
+- tmux and workflow enhancements
