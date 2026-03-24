@@ -54,6 +54,27 @@ chmod +x install.sh
 ./install.sh
 ```
 
+## Reset To Default
+
+To remove managed configuration, uninstall related Homebrew packages, and restore the latest backups:
+
+```bash
+chmod +x reset.sh
+./reset.sh
+```
+
+Non-interactive mode:
+
+```bash
+./reset.sh --yes
+```
+
+Notes:
+
+- Homebrew packages installed by this setup are removed.
+- Homebrew itself is kept installed.
+- Global Git settings are not reset.
+
 ## What Gets Configured
 
 ### Files
