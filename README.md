@@ -259,6 +259,18 @@ brew install starship
 source ~/.zshrc
 ```
 
+### Option+Delete does not delete word-by-word on macOS
+
+Word deletion is handled by your shell keybindings, not by Starship itself.
+
+This setup now adds macOS bindings for Option-based word navigation/deletion in zsh.
+It also maps Command+Delete to full-line deletion when the terminal sends supported key sequences.
+If your shell was configured before this change, run the installer again (or add the same bindings in `~/.zshrc.local`) and reload:
+
+```bash
+source ~/.zshrc
+```
+
 If you have custom shell files, ensure one Starship init block is present:
 
 - ~/.zshrc

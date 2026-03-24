@@ -563,6 +563,57 @@ EOF
     print_info "Added Starship init block to $shell_file"
 }
 
+ensure_zsh_macos_keybindings_in_file() {
+    local zsh_file="$1"
+
+    if [ ! -f "$zsh_file" ]; then
+        return 0
+    fi
+
+    if grep -q "Terminal Setup macOS word-key bindings" "$zsh_file"; then
+        return 0
+    fi
+
+    cat >> "$zsh_file" << 'EOF'
+
+# Terminal Setup macOS word-key bindings
+# Make Option+Delete and Option+Arrow keys behave consistently on macOS terminals.
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    autoload -U select-word-style
+    select-word-style bash
+    bindkey '^[^?' backward-kill-word
+    bindkey '^[b' backward-word
+    bindkey '^[f' forward-word
+fi
+EOF
+
+    print_info "Added macOS word-key bindings to $zsh_file"
+}
+
+ensure_zsh_macos_line_keybindings_in_file() {
+    local zsh_file="$1"
+
+    if [ ! -f "$zsh_file" ]; then
+        return 0
+    fi
+
+    if grep -q "Terminal Setup macOS line-key bindings" "$zsh_file"; then
+        return 0
+    fi
+
+    cat >> "$zsh_file" << 'EOF'
+
+# Terminal Setup macOS line-key bindings
+# Make Command+Delete remove the entire command line when the terminal sends known sequences.
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    bindkey '^U' kill-whole-line
+    bindkey '^[[3;9~' kill-whole-line
+fi
+EOF
+
+    print_info "Added macOS line-key bindings to $zsh_file"
+}
+
 setup_zshrc() {
     local zshrc="$HOME/.zshrc"
     
@@ -570,6 +621,8 @@ setup_zshrc() {
     # Check if already configured
     if [ -f "$zshrc" ] && grep -q "Terminal Setup Configuration" "$zshrc"; then
         ensure_starship_init_in_file "$zshrc" "zsh"
+        ensure_zsh_macos_keybindings_in_file "$zshrc"
+        ensure_zsh_macos_line_keybindings_in_file "$zshrc"
         print_info ".zshrc already configured - skipping"
         return 0
     fi
@@ -682,6 +735,17 @@ if command -v fzf &> /dev/null; then
     }
     zle -N __fzf_history
     bindkey '^R' __fzf_history
+fi
+
+# Make Option+Delete and Option+Arrow keys behave consistently on macOS terminals.
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    autoload -U select-word-style
+    select-word-style bash
+    bindkey '^[^?' backward-kill-word
+    bindkey '^[b' backward-word
+    bindkey '^[f' forward-word
+    bindkey '^U' kill-whole-line
+    bindkey '^[[3;9~' kill-whole-line
 fi
 
 # Custom functions
