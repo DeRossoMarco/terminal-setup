@@ -20,6 +20,12 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_CONFIG_DIR="$SCRIPT_DIR/configs"
 CONFIG_DIR="$HOME/.config"
 
+# Remote fallback for one-line installs (curl | bash) where local repo files are unavailable.
+DEFAULT_REPO_SLUG="DeRossoMarco/terminal-setup"
+REPO_SLUG="${TERMINAL_SETUP_REPO:-$DEFAULT_REPO_SLUG}"
+REPO_BRANCH="${TERMINAL_SETUP_BRANCH:-main}"
+RAW_BASE_URL="https://raw.githubusercontent.com/$REPO_SLUG/$REPO_BRANCH"
+
 # Selection state
 INTERACTIVE_MODE=false
 TOOLS_ARG=""
@@ -86,6 +92,33 @@ print_error() {
 
 command_exists() {
     command -v "$1" >/dev/null 2>&1
+}
+
+download_repo_config() {
+    local rel_path="$1"
+    local dest_path="$2"
+    local url="$RAW_BASE_URL/configs/$rel_path"
+    local tmp_file
+    tmp_file="$(mktemp)"
+
+    if command_exists curl; then
+        if ! curl -fsSL "$url" -o "$tmp_file"; then
+            rm -f "$tmp_file"
+            return 1
+        fi
+    elif command_exists wget; then
+        if ! wget -qO "$tmp_file" "$url"; then
+            rm -f "$tmp_file"
+            return 1
+        fi
+    else
+        rm -f "$tmp_file"
+        return 1
+    fi
+
+    mkdir -p "$(dirname "$dest_path")"
+    mv "$tmp_file" "$dest_path"
+    return 0
 }
 
 contains_tool() {
@@ -281,6 +314,18 @@ parse_args() {
 
 prepare_tool_selection() {
     SELECTED_TOOLS=("${DEFAULT_TOOLS[@]}")
+
+    # On Linux, keep defaults aligned with the active shell unless user explicitly requests tools.
+    if [[ "$OS" == "linux" ]] && [[ -z "$TOOLS_ARG" ]] && [[ "$INTERACTIVE_MODE" != true ]]; then
+        local current_shell="${SHELL##*/}"
+        if [[ "$current_shell" != "zsh" ]]; then
+            if contains_tool "zsh-plugins"; then
+                remove_tool "zsh-plugins"
+                print_info "Skipping zsh-plugins by default because active shell is $current_shell"
+                print_info "Enable zsh plugins explicitly with: --tools shell,zsh,zsh-plugins"
+            fi
+        fi
+    fi
 
     if [[ -n "$TOOLS_ARG" ]]; then
         apply_csv_tools "$TOOLS_ARG" "set"
@@ -531,12 +576,24 @@ install_zsh_plugins_linux() {
 
 setup_shell() {
     print_info "Configuring shell..."
-    
-    # Always prefer zsh if available
-    if command_exists zsh; then
-        setup_zshrc
+
+    if [[ "$OS" == "macos" ]]; then
+        # macOS ships with zsh as the default login shell.
+        if command_exists zsh; then
+            setup_zshrc
+        else
+            setup_bashrc
+        fi
     elif [[ "$OS" == "linux" ]]; then
-        setup_bashrc
+        local current_shell="${SHELL##*/}"
+        if [[ "$current_shell" == "zsh" ]] && command_exists zsh; then
+            setup_zshrc
+        else
+            setup_bashrc
+            if command_exists zsh; then
+                print_info "zsh is installed, but active shell is $current_shell; configured bash"
+            fi
+        fi
     fi
     
     print_success "Shell configuration complete"
@@ -874,8 +931,13 @@ setup_tmux() {
         cp "$REPO_CONFIG_DIR/tmux.conf" "$HOME/.config/tmux/tmux.conf"
         print_success "Installed tmux.conf from repo"
     else
-        print_warning "tmux.conf not found in repo"
-        return 1
+        print_warning "tmux.conf not found in local repo, trying remote fallback..."
+        if download_repo_config "tmux.conf" "$HOME/.config/tmux/tmux.conf"; then
+            print_success "Installed tmux.conf from GitHub"
+        else
+            print_warning "Could not fetch tmux.conf from GitHub"
+            return 1
+        fi
     fi
     
     # Ensure tmux loads this config by default
@@ -911,7 +973,12 @@ setup_starship() {
         cp "$REPO_CONFIG_DIR/starship.toml" "$starship_config"
         print_success "Installed Starship config from repo"
     else
-        print_warning "starship.toml not found in repo config directory"
+        print_warning "starship.toml not found in local repo, trying remote fallback..."
+        if download_repo_config "starship.toml" "$starship_config"; then
+            print_success "Installed Starship config from GitHub"
+        else
+            print_warning "Could not fetch starship.toml from GitHub"
+        fi
     fi
 }
 

@@ -200,6 +200,11 @@ With zsh configuration enabled:
 
 Linux setup supports apt, yum, and dnf.
 
+Default behavior on Linux is shell-aware:
+
+- If your active shell is `bash`, zsh plugins are not installed by default.
+- To force zsh plugin setup, pass explicit tools such as `--tools shell,zsh,zsh-plugins`.
+
 For zsh plugins on Linux, repositories are cloned under:
 
 - ~/.zsh/zsh-autosuggestions
@@ -239,6 +244,18 @@ btop
 ```
 
 ## Troubleshooting
+
+### Linux prompt/theme does not look as expected
+
+If you install with the one-line command (`curl ... | bash`), local repo files are not present.
+The installer now falls back to downloading `configs/starship.toml` and `configs/tmux.conf` from GitHub automatically.
+
+Quick checks:
+
+- Verify Starship is active: run `echo $STARSHIP_SHELL` (should not be empty after reloading shell).
+- Reload shell config: `source ~/.zshrc` or `source ~/.bashrc`.
+- Ensure a Nerd Font is selected in your terminal profile for icon glyphs.
+- On Linux, `eza` may be skipped if Rust/Cargo is missing; the script prints a warning in that case.
 
 ### Icons look broken in ls output
 
