@@ -74,6 +74,26 @@ clean_bashrc_managed_block_if_needed() {
     print_success "Removed managed block from $bashrc"
 }
 
+sanitize_zshrc_optional_tools() {
+    local zshrc="$HOME/.zshrc"
+
+    if [[ ! -f "$zshrc" ]]; then
+        return 0
+    fi
+
+    cp "$zshrc" "$zshrc.reset.backup.$(date +%Y%m%d_%H%M%S)"
+
+    # Make optional integrations safe when tools/plugins are not installed.
+    sed -i.bak \
+        -e 's|^eval "$(starship init zsh)"$|if command -v starship >/dev/null 2>\&1; then\n  eval "$(starship init zsh)"\nfi|' \
+        -e 's|^eval "$(zoxide init zsh)"$|if command -v zoxide >/dev/null 2>\&1; then\n  eval "$(zoxide init zsh)"\nfi|' \
+        -e 's|^source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh$|[ -f /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh ] \&\& source /opt/homebrew/share/zsh-autosuggestions/zsh-autosuggestions.zsh|' \
+        -e 's|^source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh$|[ -f /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ] \&\& source /opt/homebrew/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh|' \
+        "$zshrc"
+
+    rm -f "$zshrc.bak"
+}
+
 remove_setup_configs() {
     print_info "Removing managed tmux/btop configuration..."
 
@@ -209,6 +229,7 @@ main() {
 
     uninstall_brew_packages
     restore_shell_configs
+    sanitize_zshrc_optional_tools
     remove_setup_configs
 
     echo ""
