@@ -171,6 +171,37 @@ Notes:
 
 Existing shell files are backed up as timestamped files before changes.
 
+### Stats app profile (macOS)
+
+This repository includes a preconfigured Stats app profile:
+
+- `stats-settings.plist`
+
+Use it to apply the same Stats widget/layout preferences used by this setup.
+
+Recommended import flow:
+
+1. Open Stats settings.
+2. Use the app backup/import option.
+3. Select `stats-settings.plist` from this repository.
+
+Manual fallback (if import is not available in your Stats version):
+
+1. Quit Stats.
+2. Back up your current file (if it exists):
+
+```bash
+cp ~/Library/Application\ Support/eu.exelban.Stats/settings.plist ~/Library/Application\ Support/eu.exelban.Stats/settings.plist.bak
+```
+
+3. Copy the repository profile into place:
+
+```bash
+cp ./stats-settings.plist ~/Library/Application\ Support/eu.exelban.Stats/settings.plist
+```
+
+4. Start Stats again.
+
 ## Aliases And Behavior
 
 ### Main aliases
